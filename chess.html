@@ -308,11 +308,11 @@
             return moves;
         }
 
-        function getBishopMoves(row, col) {
+        function getSlidingMoves(row, col, directions, canJump = false) {
             const moves = [];
-            const directions = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
 
             directions.forEach(([rowDir, colDir]) => {
+                let jumped = false;
                 for (let i = 1; i < 8; i++) {
                     const newRow = row + i * rowDir;
                     const newCol = col + i * colDir;
@@ -325,58 +325,53 @@
                         if (!isPieceOwnedByCurrentPlayer(board[newRow][newCol])) {
                             moves.push({ row: newRow, col: newCol });
                         }
-                        break;
+                        if (!canJump) {
+                            break;
+                        } else if (!jumped) {
+                            jumped = true;
+                        } else {
+                            break;
+                        }
                     }
                 }
             });
 
             return moves;
+        }
+
+        function getBishopMoves(row, col) {
+            return getSlidingMoves(row, col, [[-1, -1], [-1, 1], [1, -1], [1, 1]]);
         }
 
         function getRookMoves(row, col) {
-            const moves = [];
-            const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-
-            directions.forEach(([rowDir, colDir]) => {
-                for (let i = 1; i < 8; i++) {
-                    const newRow = row + i * rowDir;
-                    const newCol = col + i * colDir;
-                    
-                    if (!isInBounds(newRow, newCol)) break;
-                    
-                    if (!board[newRow][newCol]) {
-                        moves.push({ row: newRow, col: newCol });
-                    } else {
-                        if (!isPieceOwnedByCurrentPlayer(board[newRow][newCol])) {
-                            moves.push({ row: newRow, col: newCol });
-                        }
-                        break;
-                    }
-                }
-            });
-
-            return moves;
+            return getSlidingMoves(row, col, [[-1, 0], [1, 0], [0, -1], [0, 1]]);
         }
 
         function getQueenMoves(row, col) {
-            return [...getBishopMoves(row, col), ...getRookMoves(row, col)];
+            return getSlidingMoves(row, col, [
+                [-1, -1], [-1, 0], [-1, 1],
+                [0, -1], [0, 1],
+                [1, -1], [1, 0], [1, 1]
+            ]);
         }
 
-        function getKingMoves(row, col) {
-            const moves = [];
+        function getKingBasicMoves(row, col) {
             const kingMoves = [
                 [-1, -1], [-1, 0], [-1, 1],
                 [0, -1], [0, 1],
                 [1, -1], [1, 0], [1, 1]
             ];
 
-            kingMoves.forEach(([rowOffset, colOffset]) => {
-                const newRow = row + rowOffset;
-                const newCol = col + colOffset;
-                if (isInBounds(newRow, newCol) && (!board[newRow][newCol] || !isPieceOwnedByCurrentPlayer(board[newRow][newCol]))) {
-                    moves.push({ row: newRow, col: newCol });
-                }
-            });
+            return kingMoves
+                .map(([rowOffset, colOffset]) => ({ row: row + rowOffset, col: col + colOffset }))
+                .filter(({ row: newRow, col: newCol }) => 
+                    isInBounds(newRow, newCol) && 
+                    (!board[newRow][newCol] || !isPieceOwnedByCurrentPlayer(board[newRow][newCol]))
+                );
+        }
+
+        function getKingMoves(row, col) {
+            const moves = getKingBasicMoves(row, col);
 
             // Castling
             const piece = board[row][col];
@@ -539,24 +534,7 @@
             return moves;
         }
 
-        function getKingBasicMoves(row, col) {
-            const moves = [];
-            const kingMoves = [
-                [-1, -1], [-1, 0], [-1, 1],
-                [0, -1], [0, 1],
-                [1, -1], [1, 0], [1, 1]
-            ];
 
-            kingMoves.forEach(([rowOffset, colOffset]) => {
-                const newRow = row + rowOffset;
-                const newCol = col + colOffset;
-                if (isInBounds(newRow, newCol) && (!board[newRow][newCol] || !isPieceOwnedByCurrentPlayer(board[newRow][newCol]))) {
-                    moves.push({ row: newRow, col: newCol });
-                }
-            });
-
-            return moves;
-        }
 
         function wouldBeInCheckAfterMove(fromRow, fromCol, toRow, toCol, movingPiece) {
             const originalPiece = board[toRow][toCol];
@@ -586,9 +564,7 @@
             return inCheck;
         }
 
-        function isCheckmate(color) {
-            if (!isInCheck(color)) return false;
-
+        function hasAnyLegalMoves(color) {
             for (let row = 0; row < 8; row++) {
                 for (let col = 0; col < 8; col++) {
                     const piece = board[row][col];
@@ -599,33 +575,19 @@
                         const moves = getValidMoves(row, col);
                         currentPlayer = originalPlayer;
                         
-                        if (moves.length > 0) return false;
+                        if (moves.length > 0) return true;
                     }
                 }
             }
+            return false;
+        }
 
-            return true;
+        function isCheckmate(color) {
+            return isInCheck(color) && !hasAnyLegalMoves(color);
         }
 
         function isStalemate(color) {
-            if (isInCheck(color)) return false;
-
-            for (let row = 0; row < 8; row++) {
-                for (let col = 0; col < 8; col++) {
-                    const piece = board[row][col];
-                    if (piece && ((color === 'white' && piece === piece.toUpperCase()) || 
-                                  (color === 'black' && piece === piece.toLowerCase()))) {
-                        const originalPlayer = currentPlayer;
-                        currentPlayer = color;
-                        const moves = getValidMoves(row, col);
-                        currentPlayer = originalPlayer;
-                        
-                        if (moves.length > 0) return false;
-                    }
-                }
-            }
-
-            return true;
+            return !isInCheck(color) && !hasAnyLegalMoves(color);
         }
 
         function makeMove(fromRow, fromCol, toRow, toCol) {
@@ -736,8 +698,8 @@
             ];
         }
 
-        function resetGame() {
-            board = getStandardBoard();
+        function resetGameWithBoard(boardConfig) {
+            board = boardConfig;
             currentPlayer = 'white';
             selectedSquare = null;
             validMoves = [];
@@ -753,21 +715,12 @@
             renderBoard();
         }
 
+        function resetGame() {
+            resetGameWithBoard(getStandardBoard());
+        }
+
         function resetGameWithDinosaurs() {
-            board = getDinosaurBoard();
-            currentPlayer = 'white';
-            selectedSquare = null;
-            validMoves = [];
-            castlingRights = {
-                white: { kingSide: true, queenSide: true },
-                black: { kingSide: true, queenSide: true }
-            };
-            enPassantTarget = null;
-            lastMove = null;
-            document.getElementById('currentPlayer').textContent = "White's Turn";
-            document.getElementById('gameStatus').textContent = '';
-            document.getElementById('gameStatus').style.color = '';
-            renderBoard();
+            resetGameWithBoard(getDinosaurBoard());
         }
 
         renderBoard();
