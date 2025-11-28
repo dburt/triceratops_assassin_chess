@@ -126,24 +126,16 @@
     
     <div class="controls">
         <button onclick="resetGame()">New Game</button>
+        <button onclick="resetGameWithDinosaurs()">New Game With Dinosaurs</button>
     </div>
 
     <script>
         const pieces = {
-            'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',
-            'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟'
+            'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙', 'T': '🦕',
+            'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟', 't': '🦖'
         };
 
-        let board = [
-            ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
-            ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
-            [null, null, null, null, null, null, null, null],
-            [null, null, null, null, null, null, null, null],
-            [null, null, null, null, null, null, null, null],
-            [null, null, null, null, null, null, null, null],
-            ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
-            ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
-        ];
+        let board = getStandardBoard();
 
         let currentPlayer = 'white';
         let selectedSquare = null;
@@ -257,6 +249,9 @@
                     break;
                 case 'k':
                     moves.push(...getKingMoves(row, col));
+                    break;
+                case 't':
+                    moves.push(...getTriceratopsMoves(row, col));
                     break;
             }
 
@@ -409,6 +404,59 @@
             return moves;
         }
 
+        function getTriceratopsMoves(row, col) {
+            const moves = [];
+            // Triceratops moves like a knight + bishop combination (limited jumping)
+            
+            // Knight moves
+            const knightMoves = [
+                [-2, -1], [-2, 1], [-1, -2], [-1, 2],
+                [1, -2], [1, 2], [2, -1], [2, 1]
+            ];
+
+            knightMoves.forEach(([rowOffset, colOffset]) => {
+                const newRow = row + rowOffset;
+                const newCol = col + colOffset;
+                if (isInBounds(newRow, newCol) && (!board[newRow][newCol] || !isPieceOwnedByCurrentPlayer(board[newRow][newCol]))) {
+                    moves.push({ row: newRow, col: newCol });
+                }
+            });
+
+            // Bishop moves (can jump over exactly one piece)
+            const directions = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
+
+            directions.forEach(([rowDir, colDir]) => {
+                let jumped = false;
+                for (let i = 1; i < 8; i++) {
+                    const newRow = row + i * rowDir;
+                    const newCol = col + i * colDir;
+                    
+                    if (!isInBounds(newRow, newCol)) break;
+                    
+                    if (!board[newRow][newCol]) {
+                        moves.push({ row: newRow, col: newCol });
+                    } else {
+                        if (!isPieceOwnedByCurrentPlayer(board[newRow][newCol])) {
+                            // Can capture enemy pieces
+                            moves.push({ row: newRow, col: newCol });
+                            if (!jumped) {
+                                // First piece encountered - can jump over it and continue
+                                jumped = true;
+                            } else {
+                                // Already jumped over one piece, stop
+                                break;
+                            }
+                        } else {
+                            // Hit own piece, stop
+                            break;
+                        }
+                    }
+                }
+            });
+
+            return moves;
+        }
+
         function isInBounds(row, col) {
             return row >= 0 && row < 8 && col >= 0 && col < 8;
         }
@@ -458,6 +506,9 @@
                                 break;
                             case 'k':
                                 moves.push(...getKingBasicMoves(row, col));
+                                break;
+                            case 't':
+                                moves.push(...getTriceratopsMoves(row, col));
                                 break;
                         }
 
@@ -659,8 +710,8 @@
             }
         }
 
-        function resetGame() {
-            board = [
+        function getStandardBoard() {
+            return [
                 ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
                 ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
                 [null, null, null, null, null, null, null, null],
@@ -670,6 +721,40 @@
                 ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
                 ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
             ];
+        }
+
+        function getDinosaurBoard() {
+            return [
+                ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
+                ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
+                [null, null, null, null, 't', null, null, null],
+                [null, null, null, null, null, null, null, null],
+                [null, null, null, null, null, null, null, null],
+                [null, null, null, null, 'T', null, null, null],
+                ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
+                ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
+            ];
+        }
+
+        function resetGame() {
+            board = getStandardBoard();
+            currentPlayer = 'white';
+            selectedSquare = null;
+            validMoves = [];
+            castlingRights = {
+                white: { kingSide: true, queenSide: true },
+                black: { kingSide: true, queenSide: true }
+            };
+            enPassantTarget = null;
+            lastMove = null;
+            document.getElementById('currentPlayer').textContent = "White's Turn";
+            document.getElementById('gameStatus').textContent = '';
+            document.getElementById('gameStatus').style.color = '';
+            renderBoard();
+        }
+
+        function resetGameWithDinosaurs() {
+            board = getDinosaurBoard();
             currentPlayer = 'white';
             selectedSquare = null;
             validMoves = [];
