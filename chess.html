@@ -127,12 +127,14 @@
     <div class="controls">
         <button onclick="resetGame()">New Game</button>
         <button onclick="resetGameWithDinosaurs()">New Game With Dinosaurs</button>
+        <button onclick="resetGameWithAssassins()">New Game With Assassins</button>
+        <button onclick="toggleAssassinVisibility()" id="assassinToggle" style="display: none;">Toggle Assassin Visibility</button>
     </div>
 
     <script>
         const pieces = {
-            'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙', 'T': '🦕',
-            'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟', 't': '🦖'
+            'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙', 'T': '🦕', 'A': '🥷🏻',
+            'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟', 't': '🦖', 'a': '🥷🏿'
         };
 
         let board = getStandardBoard();
@@ -146,6 +148,9 @@
         };
         let enPassantTarget = null;
         let lastMove = null;
+        let gameMode = 'standard';
+        let assassinPlaced = { white: false, black: false };
+        let showAssassin = false;
 
         function renderBoard() {
             const boardElement = document.getElementById('board');
@@ -161,7 +166,17 @@
 
                     const piece = board[row][col];
                     if (piece) {
-                        square.textContent = pieces[piece];
+                        // Hide assassins from opponent, show own assassin only if toggled
+                        if (piece.toLowerCase() === 'a') {
+                            const pieceColor = piece === piece.toUpperCase() ? 'white' : 'black';
+                            if (pieceColor !== currentPlayer) {
+                                square.textContent = ''; // Always hide opponent's assassin
+                            } else {
+                                square.textContent = showAssassin ? pieces[piece] : ''; // Show own assassin only if toggled
+                            }
+                        } else {
+                            square.textContent = pieces[piece];
+                        }
                     }
 
                     // Highlight king in check
@@ -191,6 +206,29 @@
         }
 
         function handleSquareClick(row, col) {
+            // Handle assassin placement on first move - must place before any other move
+            if (gameMode === 'assassin' && !assassinPlaced[currentPlayer]) {
+                if (currentPlayer === 'white' && row === 5 && !board[row][col]) {
+                    board[row][col] = 'A';
+                    assassinPlaced.white = true;
+                    showAssassin = false; // Hide after placement
+                    switchPlayer();
+                    updateGameStatus(); // Clear placement message
+                    renderBoard();
+                    return;
+                } else if (currentPlayer === 'black' && row === 2 && !board[row][col]) {
+                    board[row][col] = 'a';
+                    assassinPlaced.black = true;
+                    showAssassin = false; // Hide after placement
+                    switchPlayer();
+                    updateGameStatus(); // Clear placement message
+                    renderBoard();
+                    return;
+                }
+                // If clicking elsewhere during placement phase, don't do anything
+                return;
+            }
+
             if (selectedSquare) {
                 const isValidMove = validMoves.some(move => move.row === row && move.col === col);
                 
@@ -252,6 +290,9 @@
                     break;
                 case 't':
                     moves.push(...getTriceratopsMoves(row, col));
+                    break;
+                case 'a':
+                    moves.push(...getKingMoves(row, col));
                     break;
             }
 
@@ -505,6 +546,9 @@
                             case 't':
                                 moves.push(...getTriceratopsMoves(row, col));
                                 break;
+                            case 'a':
+                                moves.push(...getKingBasicMoves(row, col));
+                                break;
                         }
 
                         if (moves.some(move => move.row === kingPos.row && move.col === kingPos.col)) {
@@ -653,10 +697,22 @@
         function switchPlayer() {
             currentPlayer = currentPlayer === 'white' ? 'black' : 'white';
             document.getElementById('currentPlayer').textContent = currentPlayer === 'white' ? "White's Turn" : "Black's Turn";
+            
+            // Hide assassin when turn changes
+            if (gameMode === 'assassin') {
+                showAssassin = false;
+            }
         }
 
         function updateGameStatus() {
             const statusElement = document.getElementById('gameStatus');
+            
+            // Show assassin placement instruction
+            if (gameMode === 'assassin' && !assassinPlaced[currentPlayer]) {
+                statusElement.textContent = 'Place your assassin in your third rank';
+                statusElement.style.color = '#4CAF50';
+                return;
+            }
             
             if (isCheckmate(currentPlayer)) {
                 statusElement.textContent = `Checkmate! ${currentPlayer === 'white' ? 'Black' : 'White'} wins!`;
@@ -686,16 +742,14 @@
         }
 
         function getDinosaurBoard() {
-            return [
-                ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
-                ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
-                [null, null, null, null, 't', null, null, null],
-                [null, null, null, null, null, null, null, null],
-                [null, null, null, null, null, null, null, null],
-                [null, null, null, null, 'T', null, null, null],
-                ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
-                ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
-            ];
+            var board = getStandardBoard()
+            board[5][4] = 'T';
+            board[2][4] = 't';
+            return board;
+        }
+
+        function getAssassinBoard() {
+            return getStandardBoard();
         }
 
         function resetGameWithBoard(boardConfig) {
@@ -709,18 +763,40 @@
             };
             enPassantTarget = null;
             lastMove = null;
+            if (gameMode === 'assassin') {
+                assassinPlaced = { white: false, black: false };
+                showAssassin = false;
+            }
             document.getElementById('currentPlayer').textContent = "White's Turn";
             document.getElementById('gameStatus').textContent = '';
             document.getElementById('gameStatus').style.color = '';
+            updateGameStatus(); // This will show placement message if needed
             renderBoard();
         }
 
         function resetGame() {
+            gameMode = 'standard';
+            document.getElementById('assassinToggle').style.display = 'none';
             resetGameWithBoard(getStandardBoard());
         }
 
         function resetGameWithDinosaurs() {
+            gameMode = 'dinosaur';
+            document.getElementById('assassinToggle').style.display = 'none';
             resetGameWithBoard(getDinosaurBoard());
+        }
+
+        function resetGameWithAssassins() {
+            gameMode = 'assassin';
+            assassinPlaced = { white: false, black: false };
+            showAssassin = false;
+            document.getElementById('assassinToggle').style.display = 'inline-block';
+            resetGameWithBoard(getAssassinBoard());
+        }
+
+        function toggleAssassinVisibility() {
+            showAssassin = !showAssassin;
+            renderBoard();
         }
 
         renderBoard();
