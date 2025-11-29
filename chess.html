@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Custom Chess</title>
+<title>Special Chess</title>
 <style>
     body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: #f0f0f0; padding: 20px; }
     .board { display: grid; grid-template-columns: repeat(8, 60px); grid-template-rows: repeat(8, 60px); border: 2px solid #333; user-select: none; }
@@ -20,19 +20,20 @@
 </style>
 </head>
 <body>
-    <h1>Chess Variants</h1>
+    <h1>Special Chess</h1>
     <div id="turnDisplay">White's Turn</div>
     <div id="board" class="board"></div>
     <div id="status"></div>
     <div class="controls">
-        <button onclick="initGame('standard')">Standard</button>
-        <button onclick="initGame('dinosaur')">Dinosaurs</button>
-        <button onclick="initGame('assassin')">Assassins</button>
+        <button onclick="initGame('standard')">New game</button>
+        <button onclick="initGame('dinosaur')">New game with dinosaurs</button>
+        <button onclick="initGame('assassin')">New game with assassins</button>
         <button id="btnAssassin" onclick="toggleAssassin()" style="display:none">Show My Assassin</button>
     </div>
 
 <script>
-const SYMBOLS = { 'K':'♔','Q':'♕','R':'♖','B':'♗','N':'♘','P':'♙','T':'🦕','A':'🥷🏻','k':'♚','q':'♛','r':'♜','b':'♝','n':'♞','p':'♟','t':'🦖','a':'🥷🏿' };
+const SYMBOLS = { 'K':'♔','Q':'♕','R':'♖','B':'♗','N':'♘','P':'♙','T':'🦕','A':'🥷🏻',
+                  'k':'♚','q':'♛','r':'♜','b':'♝','n':'♞','p':'♟','t':'🦖','a':'🥷🏿' };
 const VECTORS = {
     diagonals: [[1,1],[1,-1],[-1,1],[-1,-1]],
     orthogonals: [[1,0],[-1,0],[0,1],[0,-1]],
@@ -189,9 +190,15 @@ function generateMoves(r, c, p, board = state.board, checkCastling = true) {
         const dirs = type==='b' ? VECTORS.diagonals : type==='r' ? VECTORS.orthogonals : [...VECTORS.orthogonals, ...VECTORS.diagonals];
         
         if (type === 't') { // Triceratops
+            // King moves (one square in any direction)
+            [...VECTORS.orthogonals, ...VECTORS.diagonals].forEach(([dr, dc]) => {
+                const tr=r+dr, tc=c+dc; if(onBoard(tr, tc) && (!board[tr][tc] || opp(board[tr][tc]))) add(tr, tc);
+            });
+            // Knight moves
             VECTORS.knight.forEach(([dr, dc]) => {
                  const tr=r+dr, tc=c+dc; if(onBoard(tr, tc) && (!board[tr][tc] || opp(board[tr][tc]))) add(tr, tc);
             });
+            // Bishop moves (with jumping)
             VECTORS.diagonals.forEach(([dr, dc]) => {
                 let jumped = false;
                 for (let i=1; i<8; i++) {
