@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Special Chess</title>
+<style>
+    body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: #2d2d2d; color: #eee; padding: 20px; }
+    h1 { margin-bottom: 5px; }
+    .board { display: grid; grid-template-columns: repeat(8, 60px); grid-template-rows: repeat(8, 60px); border: 5px solid #555; user-select: none; }
+    .square { width: 60px; height: 60px; display: flex; justify-content: center; align-items: center; font-size: 40px; cursor: pointer; position: relative; }
+    .light { background: #e0c090; color: black; } .dark { background: #8a6040; color: black; }
+    
+    .selected { background: #7fc97f !important; }
+    .check { background: #ff5252 !important; }
+    
+    /* Move Hints */
+    .hint::after { content: ''; position: absolute; width: 18px; height: 18px; background: rgba(0,0,0,0.3); border-radius: 50%; }
+    .capture { background: #ff9800 !important; }
+    .capture::after { content: ''; position: absolute; inset: 0; border: 4px solid rgba(180, 0, 0, 0.6); border-radius: 50%; }
+    
+    /* Assassin Styles */
+    .ghost { opacity: 0.5; filter: grayscale(100%); }
+    .revealed { outline: 3px dashed #d00; outline-offset: -3px; background-color: rgba(255, 0, 0, 0.2); }
+
+    .controls { margin-top: 20px; justify-content: center; display: flex; flex-direction: column; align-items: center; }
+    .view-toggle { margin-bottom: 10px; }
+    .new-game-buttons button { margin: 0 5px; }
+    button { padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+    button:hover { background: #45a049; }
+    button.secondary { background: #2196F3; }
+    
+    #status { font-weight: bold; margin: 15px 0; min-height: 24px; text-align: center; font-size: 1.2em; color: #ffeb3b; }
+    #turnDisplay { font-size: 1.5em; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+    <h1>Special Chess</h1>
+    <div id="turnDisplay">White's Turn</div>
+    <div id="board" class="board"></div>
+    <div id="status"></div>
+    
+    <div class="controls">
+        <div class="view-toggle">
+            <button id="btnAssassin" class="secondary" onclick="toggleView()" style="display:none">Show My Assassin</button>
+        </div>
+        <div class="new-game-buttons">
+            <button onclick="initGame('standard')">New game</button>
+            <button onclick="initGame('dinosaur')">New game with dinosaurs</button>
+            <button onclick="initGame('assassin')">New game with assassins</button>
+        </div>
+    </div>
+
+<script>
+const SYMBOLS = { 'K':'♔','Q':'♕','R':'♖','B':'♗','N':'♘','P':'♙','T':'🦕','A':'🥷🏻',
+                  'k':'♚','q':'♛','r':'♜','b':'♝','n':'♞','p':'♟','t':'🦖','a':'🥷🏿' };
+
+const VECTORS = {
+    diagonals: [[1,1],[1,-1],[-1,1],[-1,-1]],
+    orthogonals: [[1,0],[-1,0],[0,1],[0,-1]],
+    knight: [[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2]]
+};
+
+let state = { 
+    board: [], turn: 'white', selected: null, moves: [], 
+    castling: {}, enPassant: null, mode: 'standard', 
+    assassinsPlaced: {w:false, b:false}, 
+    showMyHidden: false, 
+    winner: null 
+};
+
+function initGame(mode) {
+    state = { 
+        board: createBoard(mode), turn: 'white', selected: null, moves: [], 
+        castling: { w: {k:1,q:1}, b: {k:1,q:1} }, enPassant: null, mode: mode, 
+        assassinsPlaced: { w: false, b: false }, showMyHidden: false, winner: null
+    };
+    document.getElementById('btnAssassin').style.display = mode === 'assassin' ? 'block' : 'none';
+    render();
+}
+
+function createBoard(mode) {
+    const b = Array(8).fill(null).map(() => Array(8).fill(null));
+    const setRow = (r, p) => p.forEach((type, c) => b[r][c] = type);
+    setRow(0, ['r','n','b','q','k','b','n','r']); setRow(1, Array(8).fill('p'));
+    setRow(6, Array(8).fill('P')); setRow(7, ['R','N','B','Q','K','B','N','R']);
+    if (mode === 'dinosaur') { b[5][4] = 'T'; b[2][4] = 't'; } 
+    return b;
+}
+
+// --- VISIBILITY LOGIC ---
+
+function isHidden(r, c, board) {
+    const p = board[r][c];
+    if (!p || state.mode !== 'assassin' || p.toLowerCase() !== 'a') return false;
+
+    // It is an Assassin. Check dynamic reveal conditions.
+    const isWhiteAss = (p === 'A');
+    const enemyPawnChar = isWhiteAss ? 'p' : 'P';
+    
+    for (let pr = 0; pr < 8; pr++) {
+        for (let pc = 0; pc < 8; pc++) {
+            if (board[pr][pc] === enemyPawnChar) {
+                // 1. Diagonal Attack
+                const attackRow = pr + (isWhiteAss ? 1 : -1); 
+                if (attackRow === r && Math.abs(pc - c) === 1) return false; // Revealed
+
+                // 2. Passed
+                if (isWhiteAss && pr > r) return false; // Revealed
+                if (!isWhiteAss && pr < r) return false; // Revealed
+            }
+        }
+    }
+    return true; // Hidden
+}
+
+// Returns the piece if visible, null if empty OR hidden assassin
+function getEffectivePiece(r, c, board) {
+    if (isHidden(r, c, board)) return null;
+    return board[r][c];
+}
+
+// --- RENDER ---
+
+function render() {
+    const el = document.getElementById('board'); el.innerHTML = '';
+    const turnTxt = document.getElementById('turnDisplay');
+    const statusTxt = document.getElementById('status');
+    const isW = state.turn === 'white';
+    
+    turnTxt.textContent = state.winner ? "Game Over" : `${state.turn.charAt(0).toUpperCase() + state.turn.slice(1)}'s Turn`;
+    statusTxt.textContent = '';
+    
+    if (state.winner) {
+        statusTxt.textContent = state.winner;
+        statusTxt.style.color = '#4CAF50';
+    } else if (state.mode === 'assassin' && !state.assassinsPlaced[state.turn.charAt(0)]) {
+        statusTxt.textContent = `Place your Assassin on rank ${isW ? 3 : 6} (in front of a pawn)`; 
+        statusTxt.style.color = '#ff9800';
+    } else if (inCheck(state.turn)) {
+        statusTxt.textContent = hasMoves(state.turn) ? "Check!" : "Checkmate!";
+        statusTxt.style.color = '#ff5252';
+    }
+
+    state.board.forEach((row, r) => row.forEach((p, c) => {
+        const div = document.createElement('div');
+        div.className = `square ${(r+c)%2 ? 'dark' : 'light'}`;
+        
+        if (p) {
+            const pColor = p === p.toUpperCase() ? 'white' : 'black';
+            const isMine = pColor === state.turn;
+            const hidden = isHidden(r, c, state.board);
+
+            let showPiece = true;
+            let isGhost = false;
+
+            if (hidden) {
+                if (isMine && state.showMyHidden) {
+                    isGhost = true;
+                } else {
+                    showPiece = false;
+                }
+            }
+
+            if (showPiece) {
+                div.textContent = SYMBOLS[p];
+                if (isGhost) div.classList.add('ghost');
+                if (!hidden && p.toLowerCase() === 'a') div.classList.add('revealed');
+            }
+
+            if (p.toLowerCase() === 'k' && isMine && inCheck(state.turn) && !state.winner) div.classList.add('check');
+        }
+
+        if (state.selected && state.selected.r === r && state.selected.c === c) div.classList.add('selected');
+        
+        const move = state.moves.find(m => m.r === r && m.c === c);
+        if (move) {
+            // Check if capture is visible
+            const visibleTarget = getEffectivePiece(r, c, state.board);
+            const isVisibleCapture = visibleTarget !== null || move.enPassant;
+            div.classList.add(isVisibleCapture ? 'capture' : 'hint');
+        }
+
+        div.onclick = () => handleClick(r, c);
+        el.appendChild(div);
+    }));
+}
+
+// --- INTERACTION ---
+
+function handleClick(r, c) {
+    if (state.winner) return;
+    const isW = state.turn === 'white';
+    
+    // Placement
+    if (state.mode === 'assassin' && !state.assassinsPlaced[isW?'w':'b']) {
+        const pawnRow = isW ? 6 : 1;
+        const targetRow = isW ? 5 : 2; 
+        if (r === targetRow && state.board[pawnRow][c] === (isW?'P':'p') && !state.board[r][c]) {
+            state.board[r][c] = isW ? 'A' : 'a';
+            state.assassinsPlaced[isW?'w':'b'] = true;
+            nextTurn();
+        } else {
+            document.getElementById('status').textContent = "Invalid placement.";
+        }
+        return;
+    }
+
+    const move = state.moves.find(m => m.r === r && m.c === c);
+    if (move) {
+        executeMove(move);
+        return;
+    } 
+    
+    const p = state.board[r][c];
+    if (p) {
+        const pColor = p === p.toUpperCase() ? 'white' : 'black';
+        if (pColor === state.turn) {
+            state.selected = {r, c};
+            state.moves = getSafeMoves(r, c, p);
+            render();
+            return;
+        }
+    }
+    
+    state.selected = null;
+    state.moves = [];
+    render();
+}
+
+// --- MOVE LOGIC ---
+
+function getSafeMoves(r, c, p) {
+    return generateMoves(r, c, p, state.board).filter(m => {
+        const savedBoard = state.board.map(row => [...row]);
+        savedBoard[m.r][m.c] = savedBoard[r][c]; 
+        savedBoard[r][c] = null;
+        if (m.enPassant) savedBoard[r][m.c] = null;
+        
+        const myKing = findKing(savedBoard, state.turn);
+        if (!myKing) return false;
+        return !isAttacked(myKing, state.turn, savedBoard, state.board);
+    });
+}
+
+function generateMoves(r, c, p, board, checkCastling = true) {
+    const moves = [];
+    const type = p.toLowerCase();
+    const isW = p === p.toUpperCase();
+    const opp = (pc) => pc && (isW ? pc === pc.toLowerCase() : pc === pc.toUpperCase());
+    const add = (tr, tc, extra={}) => { if(onBoard(tr, tc)) moves.push({r:tr, c:tc, ...extra}); };
+
+    if (type === 'p') {
+        const dir = isW ? -1 : 1;
+        const start = isW ? 6 : 1;
+        if (onBoard(r+dir, c)) {
+            // Forward moves if effective piece is null (Empty or Hidden)
+            if (getEffectivePiece(r+dir, c, board) === null) {
+                add(r+dir, c);
+                if (r === start && getEffectivePiece(r+dir*2, c, board) === null) {
+                    add(r+dir*2, c);
+                }
+            }
+        }
+        [[r+dir, c-1], [r+dir, c+1]].forEach(([tr, tc]) => {
+            if (onBoard(tr, tc)) {
+                const target = getEffectivePiece(tr, tc, board);
+                if (target && opp(target)) {
+                    add(tr, tc);
+                } else if (state.enPassant && state.enPassant.r === tr && state.enPassant.c === tc) {
+                    add(tr, tc, { enPassant: true });
+                }
+            }
+        });
+    }
+    else if (type === 'a') {
+        for(let dr=-2; dr<=2; dr++) {
+            for(let dc=-2; dc<=2; dc++) {
+                if(dr===0 && dc===0) continue;
+                const tr = r+dr, tc = c+dc;
+                if(!onBoard(tr, tc)) continue;
+                
+                const dist = Math.max(Math.abs(dr), Math.abs(dc));
+                const targetEff = getEffectivePiece(tr, tc, board);
+                
+                if (dist === 2) {
+                    // Range 2: Can move if Effective piece is null (Empty or Hidden)
+                    if (targetEff === null) add(tr, tc);
+                } else { 
+                    // Range 1: Can move if empty/hidden OR capture visible enemy
+                    if (targetEff === null || opp(targetEff)) add(tr, tc);
+                }
+            }
+        }
+    }
+    else if (['n','k'].includes(type)) {
+        const vecs = type==='n' ? VECTORS.knight : [...VECTORS.orthogonals, ...VECTORS.diagonals];
+        vecs.forEach(([dr, dc]) => {
+            const tr=r+dr, tc=c+dc;
+            if (onBoard(tr, tc)) {
+                const target = getEffectivePiece(tr, tc, board);
+                if (!target || opp(target)) add(tr, tc);
+            }
+        });
+        if (type === 'k' && checkCastling && !inCheck(state.turn)) {
+            const row = isW ? 7 : 0;
+            const rights = isW ? state.castling.w : state.castling.b;
+            if (rights.k && !getEffectivePiece(row, 5, board) && !getEffectivePiece(row, 6, board) && !isAttacked({r:row, c:5}, state.turn, board)) add(row, 6, {castle: 'k'});
+            if (rights.q && !getEffectivePiece(row, 1, board) && !getEffectivePiece(row, 2, board) && !getEffectivePiece(row, 3, board) && !isAttacked({r:row, c:3}, state.turn, board)) add(row, 2, {castle: 'q'});
+        }
+    }
+    else { // Sliding
+        const dirs = type==='b' ? VECTORS.diagonals : type==='r' ? VECTORS.orthogonals : [...VECTORS.orthogonals, ...VECTORS.diagonals];
+        dirs.forEach(([dr, dc]) => {
+            for (let i=1; i<8; i++) {
+                const tr=r+dr*i, tc=c+dc*i;
+                if (!onBoard(tr, tc)) break;
+                const target = getEffectivePiece(tr, tc, board);
+                if (target === null) {
+                    add(tr, tc);
+                } else {
+                    if (opp(target)) add(tr, tc);
+                    break; 
+                }
+            }
+        });
+        if (type === 't') {
+            VECTORS.knight.forEach(([dr, dc]) => {
+                const tr=r+dr, tc=c+dc;
+                if(onBoard(tr, tc)) {
+                    const target = getEffectivePiece(tr, tc, board);
+                    if (!target || opp(target)) add(tr, tc);
+                }
+            });
+        }
+    }
+    return moves;
+}
+
+function executeMove(move) {
+    const {r, c} = state.selected;
+    const p = state.board[r][c];
+    const isW = state.turn === 'white';
+    
+    state.board[move.r][move.c] = p;
+    state.board[r][c] = null;
+    if (move.enPassant) state.board[r][move.c] = null;
+    
+    if (move.castle) {
+        const row = isW ? 7 : 0;
+        const rookCol = move.castle === 'k' ? 7 : 0;
+        const targetRookCol = move.castle === 'k' ? 5 : 3;
+        state.board[row][targetRookCol] = state.board[row][rookCol];
+        state.board[row][rookCol] = null;
+    }
+    if (p.toLowerCase() === 'p' && (move.r === 0 || move.r === 7)) {
+        state.board[move.r][move.c] = isW ? 'Q' : 'q';
+    }
+
+    state.enPassant = (p.toLowerCase() === 'p' && Math.abs(move.r - r) === 2) 
+        ? { r: (r + move.r) / 2, c: c } : null;
+        
+    if (p.toLowerCase() === 'k') state.castling[isW?'w':'b'] = {k:0, q:0};
+    if (p.toLowerCase() === 'r') {
+        if (c === 0) state.castling[isW?'w':'b'].q = 0;
+        if (c === 7) state.castling[isW?'w':'b'].k = 0;
+    }
+
+    nextTurn();
+}
+
+function nextTurn() {
+    const wKing = findKing(state.board, 'white');
+    const bKing = findKing(state.board, 'black');
+    if (!wKing) state.winner = "Black Wins!";
+    else if (!bKing) state.winner = "White Wins!";
+    
+    if (state.winner) {
+        render();
+        return;
+    }
+
+    state.turn = state.turn === 'white' ? 'black' : 'white';
+    state.selected = null;
+    state.moves = [];
+    state.showMyHidden = false; // Reset visibility
+    render();
+}
+
+function findKing(b, color) {
+    for(let r=0; r<8; r++) for(let c=0; c<8; c++) if(b[r][c] === (color==='white'?'K':'k')) return {r, c};
+    return null;
+}
+
+function inCheck(color) {
+    const kPos = findKing(state.board, color);
+    if (!kPos) return false;
+    return isAttacked(kPos, color, state.board);
+}
+
+function isAttacked(pos, color, board, visibilityBoard) {
+    const visRef = visibilityBoard || board; // Use specific ref if provided, else board itself
+    for(let r=0; r<8; r++) for(let c=0; c<8; c++) {
+        const p = board[r][c];
+        if (p && ((color === 'white' && p === p.toLowerCase()) || (color === 'black' && p === p.toUpperCase()))) {
+            
+            // Check assassin visibility against the reference/current board
+            if (isHidden(r, c, visRef)) continue;
+            
+            // Generate moves on the planning board, may be hypothetical future state
+            const moves = generateMoves(r, c, p, board, false);
+            if (moves.some(m => m.r === pos.r && m.c === pos.c)) return true;
+        }
+    }
+    return false;
+}
+
+function hasMoves(color) {
+    if (state.winner) return false;
+    for(let r=0; r<8; r++) for(let c=0; c<8; c++) {
+        const p = state.board[r][c];
+        if (p && (color==='white'?p===p.toUpperCase():p===p.toLowerCase())) {
+            if (getSafeMoves(r, c, p).length > 0) return true;
+        }
+    }
+    return false;
+}
+
+function onBoard(r, c) { return r >= 0 && r < 8 && c >= 0 && c < 8; }
+function toggleView() { state.showMyHidden = !state.showMyHidden; render(); }
+
+initGame('standard');
+</script>
+</body>
+</html>
