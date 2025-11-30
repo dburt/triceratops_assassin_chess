@@ -85,6 +85,10 @@
             <button onclick="redo()" class="secondary">↷ Redo</button>
         </div>
         <div class="button-row">
+            <button onclick="saveGame()" class="secondary">💾 Save</button>
+            <button onclick="loadGame()" class="secondary">📁 Load</button>
+        </div>
+        <div class="button-row">
             <h3 style="width: 100%; text-align: center; margin: 5px 0; color: #ffeb3b;">New Game</h3>
         </div>
         <div class="button-row">
@@ -662,6 +666,87 @@ function startTimer() {
     }, 1000);
     
     updateTimerDisplay();
+}
+
+// --- SAVE/LOAD ---
+
+function saveGame() {
+    const gameState = {
+        board: state.board,
+        turn: state.turn,
+        castling: state.castling,
+        enPassant: state.enPassant,
+        mode: state.mode,
+        assassinsPlaced: state.assassinsPlaced,
+        showMyHidden: state.showMyHidden,
+        promotion: state.promotion,
+        winner: state.winner,
+        moveHistory: state.moveHistory,
+        moveCount: state.moveCount,
+        timers: state.timers
+    };
+    
+    const gameData = JSON.stringify(gameState);
+    const blob = new Blob([gameData], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `chess-game-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+function loadGame() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const gameState = JSON.parse(event.target.result);
+                
+                // Validate and restore state
+                state.board = gameState.board;
+                state.turn = gameState.turn;
+                state.castling = gameState.castling;
+                state.enPassant = gameState.enPassant;
+                state.mode = gameState.mode;
+                state.assassinsPlaced = gameState.assassinsPlaced;
+                state.showMyHidden = gameState.showMyHidden;
+                state.promotion = gameState.promotion;
+                state.winner = gameState.winner;
+                state.moveHistory = gameState.moveHistory || [];
+                state.moveCount = gameState.moveCount || 0;
+                state.timers = gameState.timers || { white: 600, black: 600 };
+                state.history = [];
+                state.historyIndex = -1;
+                
+                // Update UI
+                document.getElementById('assassinControls').style.display = state.mode === 'assassin' ? 'flex' : 'none';
+                document.getElementById('rules').style.display = state.mode === 'assassin' ? 'block' : 'none';
+                document.getElementById('moveHistory').style.display = 'block';
+                
+                if (state.timerInterval) clearInterval(state.timerInterval);
+                startTimer();
+                saveToHistory();
+                render();
+                
+                document.getElementById('status').textContent = 'Game loaded successfully!';
+                document.getElementById('status').style.color = '#4CAF50';
+            } catch (error) {
+                document.getElementById('status').textContent = 'Error loading game file';
+                document.getElementById('status').style.color = '#ff5252';
+            }
+        };
+        reader.readAsText(file);
+    };
+    input.click();
 }
 
 initGame('standard');
