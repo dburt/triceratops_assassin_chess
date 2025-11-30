@@ -46,6 +46,11 @@
     #moveHistory { max-width: 400px; max-height: 120px; overflow-y: auto; background: #333; border-radius: 8px; padding: 10px; margin: 10px 0; font-family: monospace; font-size: 12px; line-height: 1.4; display: none; }
     .move-entry { color: #ccc; margin: 2px 0; }
     .move-number { color: #ffeb3b; font-weight: bold; }
+    .timer-container { display: flex; justify-content: space-around; max-width: 400px; margin: 10px 0; gap: 20px; }
+    .timer { background: #333; border-radius: 8px; padding: 10px; text-align: center; min-width: 120px; }
+    .timer.active { border: 2px solid #4CAF50; }
+    .timer-label { font-size: 12px; color: #ccc; margin-bottom: 5px; }
+    .timer-time { font-size: 18px; font-weight: bold; color: #fff; font-family: monospace; }
 </style>
 </head>
 <body>
@@ -59,6 +64,16 @@
         </div>
     </div>
     <div id="status"></div>
+    <div class="timer-container">
+        <div id="whiteTimer" class="timer">
+            <div class="timer-label">White</div>
+            <div class="timer-time">10:00</div>
+        </div>
+        <div id="blackTimer" class="timer">
+            <div class="timer-label">Black</div>
+            <div class="timer-time">10:00</div>
+        </div>
+    </div>
     <div id="moveHistory"></div>
     
     <div class="controls">
@@ -109,18 +124,23 @@ let state = {
     moveHistory: [], // Array of move notation strings
     moveCount: 0, // Total moves made
     history: [], // Array of complete game states for undo/redo
-    historyIndex: -1 // Current position in history
+    historyIndex: -1, // Current position in history
+    timers: { white: 600, black: 600 }, // Time in seconds (10 minutes each)
+    timerInterval: null // setInterval reference
 };
 
 function initGame(mode) {
+    if (state.timerInterval) clearInterval(state.timerInterval);
+    
     state = { 
         board: createBoard(mode), turn: 'white', selected: null, moves: [], 
         castling: { w: {k:1,q:1}, b: {k:1,q:1} }, enPassant: null, mode: mode, 
         assassinsPlaced: { w: false, b: false }, showMyHidden: false, 
         promotion: null, winner: null, moveHistory: [], moveCount: 0,
-        history: [], historyIndex: -1
+        history: [], historyIndex: -1, timers: { white: 600, black: 600 }, timerInterval: null
     };
     saveToHistory();
+    startTimer();
     document.getElementById('assassinControls').style.display = mode === 'assassin' ? 'flex' : 'none';
     document.getElementById('rules').style.display = mode === 'assassin' ? 'block' : 'none';
     document.getElementById('moveHistory').style.display = 'block';
@@ -367,6 +387,7 @@ function nextTurn() {
     state.selected = null;
     state.moves = [];
     state.showMyHidden = false; 
+    updateTimerDisplay();
     render();
 }
 
@@ -585,6 +606,7 @@ function undo() {
         state.historyIndex--;
         const prevState = JSON.parse(JSON.stringify(state.history[state.historyIndex]));
         Object.assign(state, prevState);
+        updateTimerDisplay();
         render();
     }
 }
@@ -594,8 +616,52 @@ function redo() {
         state.historyIndex++;
         const nextState = JSON.parse(JSON.stringify(state.history[state.historyIndex]));
         Object.assign(state, nextState);
+        updateTimerDisplay();
         render();
     }
+}
+
+// --- TIMER ---
+
+function formatTime(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+function updateTimerDisplay() {
+    const whiteTimer = document.getElementById('whiteTimer');
+    const blackTimer = document.getElementById('blackTimer');
+    
+    whiteTimer.querySelector('.timer-time').textContent = formatTime(state.timers.white);
+    blackTimer.querySelector('.timer-time').textContent = formatTime(state.timers.black);
+    
+    whiteTimer.classList.toggle('active', state.turn === 'white' && !state.winner);
+    blackTimer.classList.toggle('active', state.turn === 'black' && !state.winner);
+}
+
+function startTimer() {
+    if (state.timerInterval) clearInterval(state.timerInterval);
+    
+    state.timerInterval = setInterval(() => {
+        if (state.winner) {
+            clearInterval(state.timerInterval);
+            return;
+        }
+        
+        const currentColor = state.turn;
+        state.timers[currentColor]--;
+        
+        if (state.timers[currentColor] <= 0) {
+            state.timers[currentColor] = 0;
+            state.winner = currentColor === 'white' ? 'Black wins on time!' : 'White wins on time!';
+            clearInterval(state.timerInterval);
+        }
+        
+        updateTimerDisplay();
+    }, 1000);
+    
+    updateTimerDisplay();
 }
 
 initGame('standard');
