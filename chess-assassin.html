@@ -43,6 +43,9 @@
     
     #status { font-weight: bold; margin: 10px 0; min-height: 20px; text-align: center; font-size: clamp(1em, 3vw, 1.2em); color: #ffeb3b; }
     #turnDisplay { font-size: clamp(1.2em, 4vw, 1.5em); margin-bottom: 10px; }
+    #moveHistory { max-width: 400px; max-height: 120px; overflow-y: auto; background: #333; border-radius: 8px; padding: 10px; margin: 10px 0; font-family: monospace; font-size: 12px; line-height: 1.4; display: none; }
+    .move-entry { color: #ccc; margin: 2px 0; }
+    .move-number { color: #ffeb3b; font-weight: bold; }
 </style>
 </head>
 <body>
@@ -56,6 +59,7 @@
         </div>
     </div>
     <div id="status"></div>
+    <div id="moveHistory"></div>
     
     <div class="controls">
         <div id="assassinControls" class="button-row" style="display:none">
@@ -97,7 +101,9 @@ let state = {
     assassinsPlaced: {w:false, b:false}, 
     showMyHidden: false, 
     promotion: null, // Stores {r, c} if promotion is pending
-    winner: null 
+    winner: null,
+    moveHistory: [], // Array of move notation strings
+    moveCount: 0 // Total moves made
 };
 
 function initGame(mode) {
@@ -105,10 +111,11 @@ function initGame(mode) {
         board: createBoard(mode), turn: 'white', selected: null, moves: [], 
         castling: { w: {k:1,q:1}, b: {k:1,q:1} }, enPassant: null, mode: mode, 
         assassinsPlaced: { w: false, b: false }, showMyHidden: false, 
-        promotion: null, winner: null
+        promotion: null, winner: null, moveHistory: [], moveCount: 0
     };
     document.getElementById('assassinControls').style.display = mode === 'assassin' ? 'flex' : 'none';
     document.getElementById('rules').style.display = mode === 'assassin' ? 'block' : 'none';
+    document.getElementById('moveHistory').style.display = 'block';
     render();
 }
 
@@ -230,6 +237,9 @@ function render() {
     } else {
         modal.style.display = 'none';
     }
+
+    // Render Move History
+    renderMoveHistory();
 }
 
 // --- INTERACTION ---
@@ -279,6 +289,7 @@ function executeMove(move) {
     const {r, c} = state.selected;
     const p = state.board[r][c];
     const isW = state.turn === 'white';
+    const captured = state.board[move.r][move.c] || (move.enPassant ? state.board[r][move.c] : null);
     
     // Move
     state.board[move.r][move.c] = p;
@@ -304,22 +315,28 @@ function executeMove(move) {
         if (c === 7) state.castling[isW?'w':'b'].k = 0;
     }
 
+    // Add to move history before checking promotion
+    const moveData = { from: {r, c}, to: {r: move.r, c: move.c}, captured, promotion: null };
+    
     // Check Promotion
     if (p.toLowerCase() === 'p' && (move.r === 0 || move.r === 7)) {
-        state.promotion = { r: move.r, c: move.c };
+        state.promotion = { r: move.r, c: move.c, moveData };
         state.selected = null;
         state.moves = [];
         render();
         return; // Pause here
     }
 
+    addMoveToHistory(moveData, p, captured, null);
     nextTurn();
 }
 
 function completePromotion(pieceChar) {
     if (!state.promotion) return;
-    const {r, c} = state.promotion;
+    const {r, c, moveData} = state.promotion;
     state.board[r][c] = pieceChar;
+    moveData.promotion = pieceChar;
+    addMoveToHistory(moveData, pieceChar, null, pieceChar);
     state.promotion = null;
     nextTurn();
 }
@@ -494,6 +511,53 @@ function toggleView() {
     const btn = document.getElementById('btnAssassin');
     btn.textContent = state.showMyHidden ? '👁️ Hide Assassin' : '👁️ Show Assassin';
     render(); 
+}
+
+// --- MOVE HISTORY ---
+
+function squareToNotation(r, c) {
+    const files = 'abcdefgh';
+    return files[c] + (8 - r);
+}
+
+function pieceToNotation(piece) {
+    const notations = { 'K': 'K', 'Q': 'Q', 'R': 'R', 'B': 'B', 'N': 'N', 'P': '', 'T': 'D', 'A': 'A' };
+    return notations[piece.toUpperCase()] || '';
+}
+
+function createMoveNotation(from, to, piece, captured, promotion) {
+    let notation = pieceToNotation(piece);
+    if (piece.toUpperCase() === 'P') {
+        notation = captured ? squareToNotation(from.r, from.c)[0] : '';
+    }
+    notation += captured ? 'x' : '';
+    notation += squareToNotation(to.r, to.c);
+    if (promotion) notation += '=' + pieceToNotation(promotion);
+    return notation;
+}
+
+function addMoveToHistory(move, piece, captured, promotion) {
+    const notation = createMoveNotation(move.from, move.to, piece, captured, promotion);
+    state.moveHistory.push(notation);
+    state.moveCount++;
+}
+
+function renderMoveHistory() {
+    const historyEl = document.getElementById('moveHistory');
+    historyEl.innerHTML = '';
+    
+    for (let i = 0; i < state.moveHistory.length; i += 2) {
+        const moveNum = Math.floor(i / 2) + 1;
+        const whiteMove = state.moveHistory[i];
+        const blackMove = state.moveHistory[i + 1];
+        
+        const entry = document.createElement('div');
+        entry.className = 'move-entry';
+        entry.innerHTML = `<span class="move-number">${moveNum}.</span> ${whiteMove}${blackMove ? ' ' + blackMove : ''}`;
+        historyEl.appendChild(entry);
+    }
+    
+    historyEl.scrollTop = historyEl.scrollHeight;
 }
 
 initGame('standard');
