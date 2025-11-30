@@ -66,6 +66,10 @@
             <button id="btnAssassin" class="secondary" onclick="toggleView()">👁️ Show Assassin</button>
         </div>
         <div class="button-row">
+            <button onclick="undo()" class="secondary">↶ Undo</button>
+            <button onclick="redo()" class="secondary">↷ Redo</button>
+        </div>
+        <div class="button-row">
             <h3 style="width: 100%; text-align: center; margin: 5px 0; color: #ffeb3b;">New Game</h3>
         </div>
         <div class="button-row">
@@ -103,7 +107,9 @@ let state = {
     promotion: null, // Stores {r, c} if promotion is pending
     winner: null,
     moveHistory: [], // Array of move notation strings
-    moveCount: 0 // Total moves made
+    moveCount: 0, // Total moves made
+    history: [], // Array of complete game states for undo/redo
+    historyIndex: -1 // Current position in history
 };
 
 function initGame(mode) {
@@ -111,8 +117,10 @@ function initGame(mode) {
         board: createBoard(mode), turn: 'white', selected: null, moves: [], 
         castling: { w: {k:1,q:1}, b: {k:1,q:1} }, enPassant: null, mode: mode, 
         assassinsPlaced: { w: false, b: false }, showMyHidden: false, 
-        promotion: null, winner: null, moveHistory: [], moveCount: 0
+        promotion: null, winner: null, moveHistory: [], moveCount: 0,
+        history: [], historyIndex: -1
     };
+    saveToHistory();
     document.getElementById('assassinControls').style.display = mode === 'assassin' ? 'flex' : 'none';
     document.getElementById('rules').style.display = mode === 'assassin' ? 'block' : 'none';
     document.getElementById('moveHistory').style.display = 'block';
@@ -255,6 +263,7 @@ function handleClick(r, c) {
             state.board[r][c] = isW ? 'A' : 'a';
             state.assassinsPlaced[isW?'w':'b'] = true;
             nextTurn();
+            saveToHistory();
         } else {
             document.getElementById('status').textContent = "Invalid placement.";
         }
@@ -329,6 +338,7 @@ function executeMove(move) {
 
     addMoveToHistory(moveData, p, captured, null);
     nextTurn();
+    saveToHistory();
 }
 
 function completePromotion(pieceChar) {
@@ -339,6 +349,7 @@ function completePromotion(pieceChar) {
     addMoveToHistory(moveData, pieceChar, null, pieceChar);
     state.promotion = null;
     nextTurn();
+    saveToHistory();
 }
 
 function nextTurn() {
@@ -558,6 +569,33 @@ function renderMoveHistory() {
     }
     
     historyEl.scrollTop = historyEl.scrollHeight;
+}
+
+// --- UNDO/REDO ---
+
+function saveToHistory() {
+    const stateCopy = JSON.parse(JSON.stringify(state));
+    state.history = state.history.slice(0, state.historyIndex + 1);
+    state.history.push(stateCopy);
+    state.historyIndex++;
+}
+
+function undo() {
+    if (state.historyIndex > 0) {
+        state.historyIndex--;
+        const prevState = JSON.parse(JSON.stringify(state.history[state.historyIndex]));
+        Object.assign(state, prevState);
+        render();
+    }
+}
+
+function redo() {
+    if (state.historyIndex < state.history.length - 1) {
+        state.historyIndex++;
+        const nextState = JSON.parse(JSON.stringify(state.history[state.historyIndex]));
+        Object.assign(state, nextState);
+        render();
+    }
 }
 
 initGame('standard');
