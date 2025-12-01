@@ -51,6 +51,10 @@
     .timer.active { border: 2px solid #4CAF50; }
     .timer-label { font-size: 12px; color: #ccc; margin-bottom: 5px; }
     .timer-time { font-size: 18px; font-weight: bold; color: #fff; font-family: monospace; }
+    .game-options { background: #333; border-radius: 8px; padding: 15px; margin: 10px 0; max-width: 400px; }
+    .option-row { display: flex; align-items: center; margin: 8px 0; gap: 10px; }
+    .option-row label { color: #ccc; font-size: 14px; flex: 1; }
+    .option-row input[type="checkbox"] { width: 18px; height: 18px; }
 </style>
 </head>
 <body>
@@ -64,7 +68,7 @@
         </div>
     </div>
     <div id="status"></div>
-    <div class="timer-container">
+    <div class="timer-container" id="timerContainer">
         <div id="whiteTimer" class="timer">
             <div class="timer-label">White</div>
             <div class="timer-time">10:00</div>
@@ -72,6 +76,24 @@
         <div id="blackTimer" class="timer">
             <div class="timer-label">Black</div>
             <div class="timer-time">10:00</div>
+        </div>
+    </div>
+    <div class="game-options">
+        <h4 style="margin: 0 0 10px 0; color: #ffeb3b;">Game Options</h4>
+        <div class="option-row">
+            <label for="timerOption">Enable Timers</label>
+            <input type="checkbox" id="timerOption" checked>
+        </div>
+        <div class="option-row">
+            <label for="dinosaurOption">Include Dinosaurs</label>
+            <input type="checkbox" id="dinosaurOption">
+        </div>
+        <div class="option-row">
+            <label for="assassinOption">Include Assassins</label>
+            <input type="checkbox" id="assassinOption">
+        </div>
+        <div class="button-row" style="margin-top: 15px;">
+            <button onclick="startNewGame()" class="game-btn">🎮 New Game</button>
         </div>
     </div>
     <div id="moveHistory"></div>
@@ -87,14 +109,6 @@
         <div class="button-row">
             <button onclick="saveGame()" class="secondary">💾 Save</button>
             <button onclick="loadGame()" class="secondary">📁 Load</button>
-        </div>
-        <div class="button-row">
-            <h3 style="width: 100%; text-align: center; margin: 5px 0; color: #ffeb3b;">New Game</h3>
-        </div>
-        <div class="button-row">
-            <button onclick="initGame('standard')" class="game-btn">♟️</button>
-            <button onclick="initGame('dinosaur')" class="game-btn">🦖</button>
-            <button onclick="initGame('assassin')" class="game-btn">🥷</button>
         </div>
         <div id="rules" class="rules" style="display:none; margin-top: 15px; padding: 10px; background: #444; border-radius: 8px; font-size: 12px; line-height: 1.4; max-width: 400px;">
             <h4 style="margin: 0 0 8px 0; color: #ffeb3b;">Assassin Chess Rules:</h4>
@@ -130,21 +144,45 @@ let state = {
     history: [], // Array of complete game states for undo/redo
     historyIndex: -1, // Current position in history
     timers: { white: 600, black: 600 }, // Time in seconds (10 minutes each)
-    timerInterval: null // setInterval reference
+    timerInterval: null, // setInterval reference
+    timerEnabled: true // Whether timers are active
 };
 
-function initGame(mode) {
+function startNewGame() {
+    const timerEnabled = document.getElementById('timerOption').checked;
+    const dinosaurEnabled = document.getElementById('dinosaurOption').checked;
+    const assassinEnabled = document.getElementById('assassinOption').checked;
+    
+    initGame(timerEnabled, dinosaurEnabled, assassinEnabled);
+}
+
+function initGame(timerEnabled = true, dinosaurEnabled = false, assassinEnabled = false) {
     if (state.timerInterval) clearInterval(state.timerInterval);
+    
+    // Determine mode based on options
+    let mode = 'standard';
+    if (dinosaurEnabled && assassinEnabled) mode = 'hybrid';
+    else if (dinosaurEnabled) mode = 'dinosaur';
+    else if (assassinEnabled) mode = 'assassin';
     
     state = { 
         board: createBoard(mode), turn: 'white', selected: null, moves: [], 
         castling: { w: {k:1,q:1}, b: {k:1,q:1} }, enPassant: null, mode: mode, 
         assassinsPlaced: { w: false, b: false }, showMyHidden: false, 
         promotion: null, winner: null, moveHistory: [], moveCount: 0,
-        history: [], historyIndex: -1, timers: { white: 600, black: 600 }, timerInterval: null
+        history: [], historyIndex: -1, timers: { white: 600, black: 600 }, timerInterval: null,
+        timerEnabled: timerEnabled
     };
+    
+    // Update UI based on options
+    document.getElementById('timerContainer').style.display = timerEnabled ? 'flex' : 'none';
+    document.getElementById('assassinControls').style.display = assassinEnabled ? 'flex' : 'none';
+    document.getElementById('rules').style.display = assassinEnabled ? 'block' : 'none';
+    document.getElementById('moveHistory').style.display = 'block';
+    
     saveToHistory();
-    startTimer();
+    if (timerEnabled) startTimer();
+    render();
     document.getElementById('assassinControls').style.display = mode === 'assassin' ? 'flex' : 'none';
     document.getElementById('rules').style.display = mode === 'assassin' ? 'block' : 'none';
     document.getElementById('moveHistory').style.display = 'block';
@@ -156,7 +194,7 @@ function createBoard(mode) {
     const setRow = (r, p) => p.forEach((type, c) => b[r][c] = type);
     setRow(0, ['r','n','b','q','k','b','n','r']); setRow(1, Array(8).fill('p'));
     setRow(6, Array(8).fill('P')); setRow(7, ['R','N','B','Q','K','B','N','R']);
-    if (mode === 'dinosaur') { b[5][4] = 'T'; b[2][4] = 't'; } 
+    if (mode === 'dinosaur' || mode === 'hybrid') { b[5][4] = 'T'; b[2][4] = 't'; } 
     return b;
 }
 
@@ -645,6 +683,7 @@ function updateTimerDisplay() {
 }
 
 function startTimer() {
+    if (!state.timerEnabled) return;
     if (state.timerInterval) clearInterval(state.timerInterval);
     
     state.timerInterval = setInterval(() => {
@@ -683,7 +722,8 @@ function saveGame() {
         winner: state.winner,
         moveHistory: state.moveHistory,
         moveCount: state.moveCount,
-        timers: state.timers
+        timers: state.timers,
+        timerEnabled: state.timerEnabled
     };
     
     const gameData = JSON.stringify(gameState);
@@ -724,13 +764,21 @@ function loadGame() {
                 state.moveHistory = gameState.moveHistory || [];
                 state.moveCount = gameState.moveCount || 0;
                 state.timers = gameState.timers || { white: 600, black: 600 };
+                state.timerEnabled = gameState.timerEnabled !== undefined ? gameState.timerEnabled : true;
                 state.history = [];
                 state.historyIndex = -1;
                 
                 // Update UI
-                document.getElementById('assassinControls').style.display = state.mode === 'assassin' ? 'flex' : 'none';
-                document.getElementById('rules').style.display = state.mode === 'assassin' ? 'block' : 'none';
+                const assassinEnabled = state.mode === 'assassin' || state.mode === 'hybrid';
+                document.getElementById('assassinControls').style.display = assassinEnabled ? 'flex' : 'none';
+                document.getElementById('rules').style.display = assassinEnabled ? 'block' : 'none';
                 document.getElementById('moveHistory').style.display = 'block';
+                document.getElementById('timerContainer').style.display = state.timerEnabled ? 'flex' : 'none';
+                
+                // Update checkboxes to match loaded game
+                document.getElementById('timerOption').checked = state.timerEnabled;
+                document.getElementById('dinosaurOption').checked = state.mode === 'dinosaur' || state.mode === 'hybrid';
+                document.getElementById('assassinOption').checked = assassinEnabled;
                 
                 if (state.timerInterval) clearInterval(state.timerInterval);
                 startTimer();
