@@ -10,8 +10,8 @@
     
     /* Board */
     .board-container { position: relative; margin: 10px 0; }
-    .board { display: grid; grid-template-columns: repeat(8, minmax(32px, 50px)); border: 3px solid var(--board-border); user-select: none; touch-action: manipulation; }
-    .square { aspect-ratio: 1; display: flex; justify-content: center; align-items: center; font-size: clamp(24px, 4vw, 36px); cursor: pointer; position: relative; }
+    .board { display: grid; grid-template-columns: repeat(8, minmax(30px, min(8vw, 45px))); border: 3px solid var(--board-border); user-select: none; touch-action: manipulation; width: 100%; max-width: min(72vw, 360px); margin: 0 auto; }
+    .square { aspect-ratio: 1; display: flex; justify-content: center; align-items: center; font-size: clamp(20px, min(5vw, 32px), 32px); cursor: pointer; position: relative; }
     .light { background: var(--light); color: black; } 
     .dark { background: var(--dark); color: black; }
     
@@ -40,6 +40,11 @@
     
     .game-options { background: #333; padding: 10px; border-radius: 8px; }
     .opt-row { display: flex; align-items: center; justify-content: space-between; margin: 5px 0; }
+    .opt-row.horizontal { flex-direction: row; justify-content: space-around; flex-wrap: wrap; }
+    .opt-item { display: flex; align-items: center; gap: 5px; min-width: 80px; }
+    .info-bubble { position: relative; display: inline-block; cursor: help; }
+    .info-bubble .tooltip { visibility: hidden; width: 200px; background: #555; color: #fff; text-align: left; border-radius: 6px; padding: 8px; position: absolute; z-index: 1; bottom: 125%; left: 50%; margin-left: -100px; opacity: 0; transition: opacity 0.3s; font-size: 11px; line-height: 1.3; }
+    .info-bubble:hover .tooltip { visibility: visible; opacity: 1; }
     
     #status { height: 20px; color: #ffeb3b; font-weight: bold; text-align: center; }
     #moveHistory { max-height: 100px; overflow-y: auto; background: #222; padding: 5px; font-family: monospace; font-size: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
@@ -91,9 +96,29 @@
     <!-- Options -->
     <div class="game-options">
         <h4 style="margin:0 0 10px 0; color:#ffeb3b">New Game Options</h4>
-        <div class="opt-row"><label>Enable Timers</label><input type="checkbox" id="optTimer" checked></div>
-        <div class="opt-row"><label>Include Dinosaurs (T)</label><input type="checkbox" id="optDino"></div>
-        <div class="opt-row"><label>Include Assassins (A)</label><input type="checkbox" id="optAssassin"></div>
+        <div class="opt-row horizontal">
+            <div class="opt-item">
+                <span>⏱️</span>
+                <input type="checkbox" id="optTimer" checked>
+            </div>
+            <div class="opt-item">
+                <span>🦕</span>
+                <input type="checkbox" id="optDino">
+            </div>
+            <div class="opt-item">
+                <div class="info-bubble">
+                    <span>🥷</span>
+                    <span class="tooltip">
+                        <strong>Assassin Rules:</strong><br>
+                        • Place in front of pawn (rank 3/6)<br>
+                        • Hidden until enemy pawn attacks<br>
+                        • Moves 2 squares, captures 1<br>
+                        • Can be blind-captured
+                    </span>
+                </div>
+                <input type="checkbox" id="optAssassin">
+            </div>
+        </div>
         <div class="btn-row" style="margin-top:10px">
             <button class="primary" onclick="initGame()">🎮 Start New Game</button>
         </div>
@@ -283,7 +308,10 @@ function makeMove(move) {
         return;
     }
 
-    state.moveList.push(notation);
+    // Don't add hidden assassin moves to history
+    if (p.toLowerCase() !== 'a' || getEffectivePiece(r, c, state.board) !== null) {
+        state.moveList.push(notation);
+    }
     endTurn();
 }
 
@@ -291,7 +319,10 @@ function completePromotion(type) {
     const { r, c, notationBase } = state.promotion;
     const isW = state.turn === 'white';
     state.board[r][c] = isW ? type.toUpperCase() : type.toLowerCase();
-    state.moveList.push(notationBase + "=" + type.toUpperCase());
+    // Don't add hidden assassin promotions to history
+    if (type.toLowerCase() !== 'a' || getEffectivePiece(r, c, state.board) !== null) {
+        state.moveList.push(notationBase + "=" + type.toUpperCase());
+    }
     state.promotion = null;
     endTurn();
 }
@@ -322,7 +353,7 @@ function getSafeMoves(r, c, p) {
         simBoard[r][c] = null;
         if (m.enPassant) simBoard[r][m.c] = null; 
         const myKing = findKing(state.turn, simBoard);
-        return myKing && !isAttacked(myKing, state.turn, simBoard);
+        return myKing && !isAttacked(myKing, state.turn, simBoard, state.board);
     });
 }
 
@@ -420,12 +451,13 @@ function generateMoves(r, c, p, board, checkCastle = true) {
     return moves;
 }
 
-function isAttacked(pos, myColor, board) {
+function isAttacked(pos, myColor, board, visibilityBoard = null) {
+    const visBoard = visibilityBoard || board;
     for (let r=0; r<8; r++) {
         for (let c=0; c<8; c++) {
             const p = board[r][c];
             if (p && ((myColor === 'white' && p === p.toLowerCase()) || (myColor === 'black' && p === p.toUpperCase()))) {
-                if (state.config.assassin && p.toLowerCase() === 'a' && getEffectivePiece(r, c, board) === null) continue;
+                if (state.config.assassin && p.toLowerCase() === 'a' && getEffectivePiece(r, c, visBoard) === null) continue;
                 const moves = generateMoves(r, c, p, board, false);
                 if (moves.some(m => m.r === pos.r && m.c === pos.c)) return true;
             }
