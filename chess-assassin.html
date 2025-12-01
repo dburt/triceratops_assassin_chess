@@ -308,8 +308,10 @@ function makeMove(move) {
         return;
     }
 
-    // Don't add hidden assassin moves to history
-    if (p.toLowerCase() !== 'a' || getEffectivePiece(r, c, state.board) !== null) {
+    // Add to move history - show "A??" for hidden assassins
+    if (p.toLowerCase() === 'a' && getEffectivePiece(r, c, state.board) === null) {
+        state.moveList.push("A??");
+    } else {
         state.moveList.push(notation);
     }
     endTurn();
@@ -319,8 +321,10 @@ function completePromotion(type) {
     const { r, c, notationBase } = state.promotion;
     const isW = state.turn === 'white';
     state.board[r][c] = isW ? type.toUpperCase() : type.toLowerCase();
-    // Don't add hidden assassin promotions to history
-    if (type.toLowerCase() !== 'a' || getEffectivePiece(r, c, state.board) !== null) {
+    // Add assassin promotions to history
+    if (type.toLowerCase() === 'a' && getEffectivePiece(r, c, state.board) === null) {
+        state.moveList.push("A??=" + type.toUpperCase());
+    } else {
         state.moveList.push(notationBase + "=" + type.toUpperCase());
     }
     state.promotion = null;
