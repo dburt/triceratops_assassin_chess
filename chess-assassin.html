@@ -4,250 +4,573 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Special Chess</title>
 <style>
-    body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: #2d2d2d; color: #eee; padding: 10px; }
-    h1 { margin-bottom: 5px; }
-    .board-container { position: relative; }
-    .board { display: grid; grid-template-columns: repeat(8, minmax(35px, 50px)); grid-template-rows: repeat(8, minmax(35px, 50px)); border: 3px solid #555; user-select: none; max-width: 100vw; }
-    .square { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; font-size: clamp(24px, 4vw, 32px); cursor: pointer; position: relative; aspect-ratio: 1; }
-    .light { background: #e0c090; color: black; } .dark { background: #8a6040; color: black; }
+    :root { --bg: #2d2d2d; --text: #eee; --board-border: #555; --light: #e0c090; --dark: #8a6040; --select: #7fc97f; --check: #ff5252; }
+    body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: var(--bg); color: var(--text); padding: 10px; margin: 0; }
+    h1 { margin: 5px 0; }
     
-    .selected { background: #7fc97f !important; }
-    .check { background: #ff5252 !important; }
+    /* Board */
+    .board-container { position: relative; margin: 10px 0; }
+    .board { display: grid; grid-template-columns: repeat(8, minmax(32px, 50px)); border: 3px solid var(--board-border); user-select: none; touch-action: manipulation; }
+    .square { aspect-ratio: 1; display: flex; justify-content: center; align-items: center; font-size: clamp(24px, 4vw, 36px); cursor: pointer; position: relative; }
+    .light { background: var(--light); color: black; } 
+    .dark { background: var(--dark); color: black; }
     
-    .hint::after { content: ''; position: absolute; width: 18px; height: 18px; background: rgba(0,0,0,0.3); border-radius: 50%; }
+    /* Piece States */
+    .selected { background: var(--select) !important; }
+    .check { background: var(--check) !important; }
+    .hint::after { content: ''; position: absolute; width: 20%; height: 20%; background: rgba(0,0,0,0.3); border-radius: 50%; }
     .capture { background: #ff9800 !important; }
     .capture::after { content: ''; position: absolute; inset: 0; border: 4px solid rgba(180, 0, 0, 0.6); border-radius: 50%; }
-    
     .ghost { opacity: 0.5; filter: grayscale(100%); }
     .revealed { outline: 3px dashed #d00; outline-offset: -3px; background-color: rgba(255, 0, 0, 0.2); }
 
-    /* Promotion Modal */
-    .promotion-modal {
-        position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-        background: rgba(0,0,0,0.85); display: flex; flex-direction: column;
-        justify-content: center; align-items: center; z-index: 100;
-    }
-    .promo-options { display: flex; gap: 10px; }
-    .promo-btn {
-        width: minmax(35px, 50px); height: minmax(35px, 50px); font-size: clamp(24px, 4vw, 32px); border: 2px solid #fff;
-        background: #444; color: white; cursor: pointer; border-radius: 8px; aspect-ratio: 1;
-    }
-    .promo-btn:hover { background: #666; }
-
-    .controls { margin-top: 15px; display: flex; flex-direction: column; gap: 10px; align-items: center; width: 100%; max-width: 400px; }
-    .button-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; width: 100%; }
-    button { padding: 8px 12px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; min-width: 80px; }
-    .game-btn { font-size: clamp(24px, 4vw, 32px); text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; }
-    button:hover { background: #45a049; }
-    button.secondary { background: #2196F3; }
+    /* UI Elements */
+    .controls, .game-options, .timer-container { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
+    .timer-container { flex-direction: row; justify-content: space-between; }
     
-    #status { font-weight: bold; margin: 10px 0; min-height: 20px; text-align: center; font-size: clamp(1em, 3vw, 1.2em); color: #ffeb3b; }
-    #turnDisplay { font-size: clamp(1.2em, 4vw, 1.5em); margin-bottom: 10px; }
-    #moveHistory { max-width: 400px; max-height: 120px; overflow-y: auto; background: #333; border-radius: 8px; padding: 10px; margin: 10px 0; font-family: monospace; font-size: 12px; line-height: 1.4; display: none; }
-    .move-entry { color: #ccc; margin: 2px 0; }
-    .move-number { color: #ffeb3b; font-weight: bold; }
-    .timer-container { display: flex; justify-content: space-around; max-width: 400px; margin: 10px 0; gap: 20px; }
-    .timer { background: #333; border-radius: 8px; padding: 10px; text-align: center; min-width: 120px; }
-    .timer.active { border: 2px solid #4CAF50; }
-    .timer-label { font-size: 12px; color: #ccc; margin-bottom: 5px; }
-    .timer-time { font-size: 18px; font-weight: bold; color: #fff; font-family: monospace; }
-    .game-options { background: #333; border-radius: 8px; padding: 15px; margin: 10px 0; max-width: 400px; }
-    .option-row { display: flex; align-items: center; margin: 8px 0; gap: 10px; }
-    .option-row label { color: #ccc; font-size: 14px; flex: 1; }
-    .option-row input[type="checkbox"] { width: 18px; height: 18px; }
+    .timer { background: #333; border-radius: 8px; padding: 10px; text-align: center; flex: 1; border: 2px solid transparent; }
+    .timer.active { border-color: #4CAF50; }
+    .timer-time { font-size: 1.2em; font-weight: bold; font-family: monospace; }
+    
+    .btn-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+    button { padding: 8px 16px; background: #444; color: white; border: 1px solid #666; border-radius: 4px; cursor: pointer; font-size: 14px; }
+    button:hover { background: #555; }
+    button.primary { background: #4CAF50; border-color: #4CAF50; }
+    button.primary:hover { background: #45a049; }
+    
+    .game-options { background: #333; padding: 10px; border-radius: 8px; }
+    .opt-row { display: flex; align-items: center; justify-content: space-between; margin: 5px 0; }
+    
+    #status { height: 20px; color: #ffeb3b; font-weight: bold; text-align: center; }
+    #moveHistory { max-height: 100px; overflow-y: auto; background: #222; padding: 5px; font-family: monospace; font-size: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+    
+    /* Modal */
+    .modal { position: absolute; inset: 0; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10; }
+    .promo-opts button { font-size: 32px; width: 50px; height: 50px; margin: 5px; }
+
+    .hidden { display: none !important; }
 </style>
 </head>
 <body>
+
     <h1>Special Chess</h1>
     <div id="turnDisplay">White's Turn</div>
+    
     <div class="board-container">
         <div id="board" class="board"></div>
-        <div id="promotionModal" class="promotion-modal" style="display:none">
-            <h2 style="color:white; margin-bottom:20px">Promote to:</h2>
-            <div id="promoOptions" class="promo-options"></div>
+        <!-- Promotion Modal -->
+        <div id="promotionModal" class="modal hidden">
+            <h3 style="color:white">Promote to:</h3>
+            <div id="promoOptions" class="promo-opts"></div>
         </div>
     </div>
+
     <div id="status"></div>
-    <div class="timer-container" id="timerContainer">
-        <div id="whiteTimer" class="timer">
-            <div class="timer-label">White</div>
-            <div class="timer-time">10:00</div>
-        </div>
-        <div id="blackTimer" class="timer">
-            <div class="timer-label">Black</div>
-            <div class="timer-time">10:00</div>
-        </div>
+
+    <div class="timer-container hidden" id="timerContainer">
+        <div id="whiteTimer" class="timer"><div class="lbl">White</div><div class="timer-time">10:00</div></div>
+        <div id="blackTimer" class="timer"><div class="lbl">Black</div><div class="timer-time">10:00</div></div>
     </div>
-    <div class="game-options">
-        <h4 style="margin: 0 0 10px 0; color: #ffeb3b;">Game Options</h4>
-        <div class="option-row">
-            <label for="timerOption">Enable Timers</label>
-            <input type="checkbox" id="timerOption" checked>
-        </div>
-        <div class="option-row">
-            <label for="dinosaurOption">Include Dinosaurs</label>
-            <input type="checkbox" id="dinosaurOption">
-        </div>
-        <div class="option-row">
-            <label for="assassinOption">Include Assassins</label>
-            <input type="checkbox" id="assassinOption">
-        </div>
-        <div class="button-row" style="margin-top: 15px;">
-            <button onclick="startNewGame()" class="game-btn">🎮 New Game</button>
-        </div>
-    </div>
-    <div id="moveHistory"></div>
-    
+
+    <!-- Controls -->
     <div class="controls">
-        <div id="assassinControls" class="button-row" style="display:none">
-            <button id="btnAssassin" class="secondary" onclick="toggleView()">👁️ Show Assassin</button>
+        <div class="btn-row hidden" id="assassinControls">
+            <button id="btnAssassin" onclick="toggleAssassinView()">👁️ Show Assassin</button>
         </div>
-        <div class="button-row">
-            <button onclick="undo()" class="secondary">↶ Undo</button>
-            <button onclick="redo()" class="secondary">↷ Redo</button>
+        <div class="btn-row">
+            <button onclick="undo()">↶ Undo</button>
+            <button onclick="redo()">↷ Redo</button>
+            <button onclick="saveGame()">💾 Save</button>
+            <button onclick="loadGame()">📁 Load</button>
         </div>
-        <div class="button-row">
-            <button onclick="saveGame()" class="secondary">💾 Save</button>
-            <button onclick="loadGame()" class="secondary">📁 Load</button>
-        </div>
-        <div id="rules" class="rules" style="display:none; margin-top: 15px; padding: 10px; background: #444; border-radius: 8px; font-size: 12px; line-height: 1.4; max-width: 400px;">
-            <h4 style="margin: 0 0 8px 0; color: #ffeb3b;">Assassin Chess Rules:</h4>
-            <ul style="margin: 0; padding-left: 20px;">
-                <li>Place one assassin in front of a pawn (rank 3/6) - hidden from enemy</li>
-                <li>Hidden: Invisible to enemy, pieces move through it, can be blind-captured</li>
-                <li>Revealed: Visible when enemy pawn attacks it or has passed its rank</li>
-                <li>Moves: Jumps 2 squares, captures only 1 square away (like a king)</li>
-                <li>Click 👁️ to temporarily see your hidden assassin during your turn</li>
-            </ul>
+    </div>
+
+    <!-- History -->
+    <div id="moveHistory" class="hidden"></div>
+
+    <!-- Options -->
+    <div class="game-options">
+        <h4 style="margin:0 0 10px 0; color:#ffeb3b">New Game Options</h4>
+        <div class="opt-row"><label>Enable Timers</label><input type="checkbox" id="optTimer" checked></div>
+        <div class="opt-row"><label>Include Dinosaurs (T)</label><input type="checkbox" id="optDino"></div>
+        <div class="opt-row"><label>Include Assassins (A)</label><input type="checkbox" id="optAssassin"></div>
+        <div class="btn-row" style="margin-top:10px">
+            <button class="primary" onclick="initGame()">🎮 Start New Game</button>
         </div>
     </div>
 
 <script>
-const SYMBOLS = { 'K':'♔','Q':'♕','R':'♖','B':'♗','N':'♘','P':'♙','T':'🦕','A':'🥷🏻',
-                  'k':'♚','q':'♛','r':'♜','b':'♝','n':'♞','p':'♟','t':'🦖','a':'🥷🏿' };
-
+// --- CONSTANTS & CONFIG ---
+const SYMBOLS = { 
+    'K':'♔','Q':'♕','R':'♖','B':'♗','N':'♘','P':'♙','T':'🦕','A':'🥷🏻',
+    'k':'♚','q':'♛','r':'♜','b':'♝','n':'♞','p':'♟','t':'🦖','a':'🥷🏿' 
+};
 const VECTORS = {
-    diagonals: [[1,1],[1,-1],[-1,1],[-1,-1]],
-    orthogonals: [[1,0],[-1,0],[0,1],[0,-1]],
+    diag: [[1,1],[1,-1],[-1,1],[-1,-1]],
+    orth: [[1,0],[-1,0],[0,1],[0,-1]],
     knight: [[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2]]
 };
 
-let state = { 
-    board: [], turn: 'white', selected: null, moves: [], 
-    castling: {}, enPassant: null, mode: 'standard', 
-    assassinsPlaced: {w:false, b:false}, 
-    showMyHidden: false, 
-    promotion: null, // Stores {r, c} if promotion is pending
+// --- GLOBAL STATE ---
+let state = {
+    board: [],
+    turn: 'white',
+    selected: null,
+    moves: [],
+    castling: { w: {k:true, q:true}, b: {k:true, q:true} },
+    enPassant: null,
+    config: { timer: true, dino: false, assassin: false },
+    assassinsPlaced: { w: false, b: false },
+    showMyHidden: false,
+    promotion: null,
     winner: null,
-    moveHistory: [], // Array of move notation strings
-    moveCount: 0, // Total moves made
-    history: [], // Array of complete game states for undo/redo
-    historyIndex: -1, // Current position in history
-    timers: { white: 600, black: 600 }, // Time in seconds (10 minutes each)
-    timerInterval: null, // setInterval reference
-    timerEnabled: true // Whether timers are active
+    history: [],    // For Undo/Redo (Snapshots)
+    moveList: [],   // For Display (Notation)
+    historyIndex: -1,
+    timers: { white: 600, black: 600 },
+    timerInterval: null
 };
 
-function startNewGame() {
-    const timerEnabled = document.getElementById('timerOption').checked;
-    const dinosaurEnabled = document.getElementById('dinosaurOption').checked;
-    const assassinEnabled = document.getElementById('assassinOption').checked;
-    
-    initGame(timerEnabled, dinosaurEnabled, assassinEnabled);
-}
-
-function initGame(timerEnabled = true, dinosaurEnabled = false, assassinEnabled = false) {
+// --- INITIALIZATION ---
+function initGame(loadedState = null) {
     if (state.timerInterval) clearInterval(state.timerInterval);
+
+    if (loadedState) {
+        state = loadedState;
+        if (state.config.timer && !state.winner) startTimer();
+    } else {
+        const config = {
+            timer: document.getElementById('optTimer').checked,
+            dino: document.getElementById('optDino').checked,
+            assassin: document.getElementById('optAssassin').checked
+        };
+
+        state = {
+            board: createBoard(config),
+            turn: 'white',
+            selected: null,
+            moves: [],
+            castling: { w: {k:true, q:true}, b: {k:true, q:true} },
+            enPassant: null,
+            config: config,
+            assassinsPlaced: { w: false, b: false },
+            showMyHidden: false,
+            promotion: null,
+            winner: null,
+            history: [],
+            moveList: [],
+            historyIndex: -1,
+            timers: { white: 600, black: 600 },
+            timerInterval: null
+        };
+        saveHistorySnapshot(); 
+        if (config.timer) startTimer();
+    }
     
-    // Determine mode based on options
-    let mode = 'standard';
-    if (dinosaurEnabled && assassinEnabled) mode = 'hybrid';
-    else if (dinosaurEnabled) mode = 'dinosaur';
-    else if (assassinEnabled) mode = 'assassin';
-    
-    state = { 
-        board: createBoard(mode), turn: 'white', selected: null, moves: [], 
-        castling: { w: {k:1,q:1}, b: {k:1,q:1} }, enPassant: null, mode: mode, 
-        assassinsPlaced: { w: false, b: false }, showMyHidden: false, 
-        promotion: null, winner: null, moveHistory: [], moveCount: 0,
-        history: [], historyIndex: -1, timers: { white: 600, black: 600 }, timerInterval: null,
-        timerEnabled: timerEnabled
-    };
-    
-    // Update UI based on options
-    document.getElementById('timerContainer').style.display = timerEnabled ? 'flex' : 'none';
-    document.getElementById('assassinControls').style.display = assassinEnabled ? 'flex' : 'none';
-    document.getElementById('rules').style.display = assassinEnabled ? 'block' : 'none';
-    document.getElementById('moveHistory').style.display = 'block';
-    
-    saveToHistory();
-    if (timerEnabled) startTimer();
-    render();
-    document.getElementById('assassinControls').style.display = mode === 'assassin' ? 'flex' : 'none';
-    document.getElementById('rules').style.display = mode === 'assassin' ? 'block' : 'none';
-    document.getElementById('moveHistory').style.display = 'block';
     render();
 }
 
-function createBoard(mode) {
+function createBoard(config) {
     const b = Array(8).fill(null).map(() => Array(8).fill(null));
     const setRow = (r, p) => p.forEach((type, c) => b[r][c] = type);
-    setRow(0, ['r','n','b','q','k','b','n','r']); setRow(1, Array(8).fill('p'));
-    setRow(6, Array(8).fill('P')); setRow(7, ['R','N','B','Q','K','B','N','R']);
-    if (mode === 'dinosaur' || mode === 'hybrid') { b[5][4] = 'T'; b[2][4] = 't'; } 
+    setRow(0, ['r','n','b','q','k','b','n','r']); 
+    setRow(1, Array(8).fill('p'));
+    setRow(6, Array(8).fill('P')); 
+    setRow(7, ['R','N','B','Q','K','B','N','R']);
+    
+    if (config.dino) { b[5][4] = 'T'; b[2][4] = 't'; }
     return b;
 }
 
-// --- VISIBILITY LOGIC ---
+// --- CORE LOGIC ---
 
-function isHidden(r, c, board) {
+function getEffectivePiece(r, c, board) {
     const p = board[r][c];
-    if (!p || state.mode !== 'assassin' || p.toLowerCase() !== 'a') return false;
+    if (!p) return null;
+    if (state.config.assassin && p.toLowerCase() === 'a') {
+        const isWhiteAss = (p === 'A');
+        const enemyPawn = isWhiteAss ? 'p' : 'P';
+        for (let pr = 0; pr < 8; pr++) {
+            for (let pc = 0; pc < 8; pc++) {
+                if (board[pr][pc] === enemyPawn) {
+                    const attackRow = pr + (isWhiteAss ? 1 : -1);
+                    if (attackRow === r && Math.abs(pc - c) === 1) return p; 
+                    if (isWhiteAss && pr > r) return p; 
+                    if (!isWhiteAss && pr < r) return p; 
+                }
+            }
+        }
+        return null; // Hidden
+    }
+    return p;
+}
 
-    const isWhiteAss = (p === 'A');
-    const enemyPawnChar = isWhiteAss ? 'p' : 'P';
+function handleClick(r, c) {
+    if (state.winner || state.promotion) return;
+    const isW = state.turn === 'white';
     
-    for (let pr = 0; pr < 8; pr++) {
-        for (let pc = 0; pc < 8; pc++) {
-            if (board[pr][pc] === enemyPawnChar) {
-                const attackRow = pr + (isWhiteAss ? 1 : -1); 
-                if (attackRow === r && Math.abs(pc - c) === 1) return false; 
-                if (isWhiteAss && pr > r) return false; 
-                if (!isWhiteAss && pr < r) return false; 
+    // Assassin Setup
+    if (state.config.assassin && !state.assassinsPlaced[isW ? 'w' : 'b']) {
+        const validRow = isW ? 5 : 2; 
+        const pawnRow = isW ? 6 : 1;
+        const myPawn = isW ? 'P' : 'p';
+        if (r === validRow && !state.board[r][c] && state.board[pawnRow][c] === myPawn) {
+            state.board[r][c] = isW ? 'A' : 'a';
+            state.assassinsPlaced[isW ? 'w' : 'b'] = true;
+            endTurn();
+        } else {
+            showStatus("Must place Assassin in front of a pawn!", true);
+        }
+        return;
+    }
+
+    // Move or Select
+    const move = state.moves.find(m => m.r === r && m.c === c);
+    if (move) {
+        makeMove(move);
+        return;
+    }
+
+    const p = state.board[r][c];
+    if (p && (p === p.toUpperCase()) === isW) {
+        state.selected = {r, c};
+        state.moves = getSafeMoves(r, c, p);
+    } else {
+        state.selected = null;
+        state.moves = [];
+    }
+    render();
+}
+
+function makeMove(move) {
+    const {r, c} = state.selected;
+    const p = state.board[r][c];
+    const isW = p === p.toUpperCase();
+    
+    // Notation
+    const captured = state.board[move.r][move.c];
+    let notation = p.toUpperCase() === 'P' && captured ? "px" : (p.toUpperCase() !== 'P' ? p.toUpperCase() : "");
+    if (captured && p.toUpperCase() !== 'P') notation += "x";
+    const files = "abcdefgh";
+    notation += files[move.c] + (8-move.r);
+
+    // Execute Move
+    state.board[move.r][move.c] = p;
+    state.board[r][c] = null;
+    if (move.enPassant) state.board[r][move.c] = null;
+
+    if (move.castle) {
+        const row = isW ? 7 : 0;
+        const rSrc = move.castle === 'k' ? 7 : 0;
+        const rDst = move.castle === 'k' ? 5 : 3;
+        state.board[row][rDst] = state.board[row][rSrc];
+        state.board[row][rSrc] = null;
+    }
+
+    // Update Rights
+    if (p.toLowerCase() === 'k') state.castling[isW?'w':'b'] = {k:false, q:false};
+    if (p.toLowerCase() === 'r') {
+        if (c === 0) state.castling[isW?'w':'b'].q = false;
+        if (c === 7) state.castling[isW?'w':'b'].k = false;
+    }
+    
+    state.enPassant = (p.toLowerCase() === 'p' && Math.abs(move.r - r) === 2) 
+        ? { r: (r + move.r)/2, c: c } : null;
+
+    if (p.toLowerCase() === 'p' && (move.r === 0 || move.r === 7)) {
+        state.promotion = { r: move.r, c: move.c, notationBase: notation };
+        render(); 
+        return;
+    }
+
+    state.moveList.push(notation);
+    endTurn();
+}
+
+function completePromotion(type) {
+    const { r, c, notationBase } = state.promotion;
+    const isW = state.turn === 'white';
+    state.board[r][c] = isW ? type.toUpperCase() : type.toLowerCase();
+    state.moveList.push(notationBase + "=" + type.toUpperCase());
+    state.promotion = null;
+    endTurn();
+}
+
+function endTurn() {
+    state.selected = null;
+    state.moves = [];
+    state.showMyHidden = false; 
+
+    const wKing = findKing('white');
+    const bKing = findKing('black');
+    if (!wKing) state.winner = "Black Wins!";
+    else if (!bKing) state.winner = "White Wins!";
+    
+    if (!state.winner) {
+        state.turn = state.turn === 'white' ? 'black' : 'white';
+        saveHistorySnapshot();
+    }
+    render();
+}
+
+// --- MOVEMENT HELPERS ---
+
+function getSafeMoves(r, c, p) {
+    return generateMoves(r, c, p, state.board).filter(m => {
+        const simBoard = state.board.map(row => [...row]);
+        simBoard[m.r][m.c] = simBoard[r][c];
+        simBoard[r][c] = null;
+        if (m.enPassant) simBoard[r][m.c] = null; 
+        const myKing = findKing(state.turn, simBoard);
+        return myKing && !isAttacked(myKing, state.turn, simBoard);
+    });
+}
+
+function generateMoves(r, c, p, board, checkCastle = true) {
+    const moves = [];
+    const type = p.toLowerCase();
+    const isW = p === p.toUpperCase();
+    const opp = (pc) => pc && (isW ? pc === pc.toLowerCase() : pc === pc.toUpperCase());
+    const onBoard = (tr, tc) => tr >= 0 && tr < 8 && tc >= 0 && tc < 8;
+    const add = (tr, tc, extra={}) => { if (onBoard(tr,tc)) moves.push({r:tr, c:tc, ...extra}); };
+
+    // 1. Pawn
+    if (type === 'p') {
+        const dir = isW ? -1 : 1;
+        if (onBoard(r+dir, c) && !getEffectivePiece(r+dir, c, board)) {
+            add(r+dir, c);
+            if ((isW && r===6) || (!isW && r===1)) {
+                if (!getEffectivePiece(r+dir*2, c, board)) add(r+dir*2, c);
+            }
+        }
+        [[1,-1], [1,1]].forEach(([dr, dc]) => {
+            const tr = r + (dir*dr), tc = c + dc;
+            if (!onBoard(tr, tc)) return;
+            const target = getEffectivePiece(tr, tc, board);
+            if (target && opp(target)) add(tr, tc);
+            if (state.enPassant && state.enPassant.r === tr && state.enPassant.c === tc) {
+                add(tr, tc, { enPassant: true });
+            }
+        });
+    } 
+    // 2. Assassin
+    else if (type === 'a') {
+        for (let dr = -2; dr <= 2; dr++) {
+            for (let dc = -2; dc <= 2; dc++) {
+                if (dr===0 && dc===0) continue;
+                const tr = r+dr, tc = c+dc;
+                if (!onBoard(tr, tc)) continue;
+                const dist = Math.max(Math.abs(dr), Math.abs(dc));
+                const target = getEffectivePiece(tr, tc, board);
+                if (dist === 2 && target === null) add(tr, tc);
+                else if (dist === 1 && (target === null || opp(target))) add(tr, tc);
             }
         }
     }
-    return true; 
+    // 3. Others (Knight, Bishop, Rook, Queen, King, Dinosaur)
+    else {
+        // A. Jumps (Knight OR Dinosaur)
+        if (type === 'n' || type === 't') {
+            VECTORS.knight.forEach(([dr, dc]) => {
+                const tr = r + dr, tc = c + dc;
+                if (onBoard(tr, tc)) {
+                    const target = getEffectivePiece(tr, tc, board);
+                    if (!target || opp(target)) add(tr, tc);
+                }
+            });
+        }
+
+        // B. Sliding/Stepping (All EXCEPT Knight)
+        if (type !== 'n') {
+            // Determine Vectors
+            const dirs = (type === 'b') ? VECTORS.diag :
+                         (type === 'r') ? VECTORS.orth :
+                         [...VECTORS.diag, ...VECTORS.orth]; // Q, K, T use both
+            
+            // Determine if Sliding (K is step, T/Q/R/B are slide)
+            const slide = ['q','r','b','t'].includes(type);
+
+            dirs.forEach(([dr, dc]) => {
+                let tr = r + dr, tc = c + dc;
+                while (onBoard(tr, tc)) {
+                    const target = getEffectivePiece(tr, tc, board);
+                    if (target) {
+                        if (opp(target)) add(tr, tc);
+                        break;
+                    }
+                    add(tr, tc);
+                    if (!slide) break; // King stops after 1
+                    tr += dr; tc += dc;
+                }
+            });
+
+            // Castling (King only)
+            if (type === 'k' && checkCastle && !isAttacked({r,c}, isW?'white':'black', board)) {
+                const rights = isW ? state.castling.w : state.castling.b;
+                const row = isW ? 7 : 0;
+                const checkEmpty = (cols) => cols.every(col => !getEffectivePiece(row, col, board));
+                
+                if (rights.k && checkEmpty([5,6]) && !isAttacked({r:row, c:5}, isW?'white':'black', board)) 
+                    add(row, 6, {castle: 'k'});
+                if (rights.q && checkEmpty([1,2,3]) && !isAttacked({r:row, c:3}, isW?'white':'black', board)) 
+                    add(row, 2, {castle: 'q'});
+            }
+        }
+    }
+    return moves;
 }
 
-function getEffectivePiece(r, c, board) {
-    if (isHidden(r, c, board)) return null;
-    return board[r][c];
+function isAttacked(pos, myColor, board) {
+    for (let r=0; r<8; r++) {
+        for (let c=0; c<8; c++) {
+            const p = board[r][c];
+            if (p && ((myColor === 'white' && p === p.toLowerCase()) || (myColor === 'black' && p === p.toUpperCase()))) {
+                if (state.config.assassin && p.toLowerCase() === 'a' && getEffectivePiece(r, c, board) === null) continue;
+                const moves = generateMoves(r, c, p, board, false);
+                if (moves.some(m => m.r === pos.r && m.c === pos.c)) return true;
+            }
+        }
+    }
+    return false;
+}
+
+function findKing(color, board = state.board) {
+    const k = color === 'white' ? 'K' : 'k';
+    for(let r=0; r<8; r++) for(let c=0; c<8; c++) if (board[r][c] === k) return {r, c};
+    return null;
+}
+
+// --- UTILITIES ---
+
+function toggleAssassinView() {
+    state.showMyHidden = !state.showMyHidden;
+    render();
+}
+
+function startTimer() {
+    state.timerInterval = setInterval(() => {
+        if (state.winner) return clearInterval(state.timerInterval);
+        if (state.timers[state.turn] > 0) {
+            state.timers[state.turn]--;
+            renderTimer();
+        } else {
+            state.winner = (state.turn === 'white' ? 'Black' : 'White') + " wins on time!";
+            render();
+            clearInterval(state.timerInterval);
+        }
+    }, 1000);
+}
+
+function renderTimer() {
+    const format = t => `${Math.floor(t/60)}:${(t%60).toString().padStart(2,'0')}`;
+    document.querySelector('#whiteTimer .timer-time').textContent = format(state.timers.white);
+    document.querySelector('#blackTimer .timer-time').textContent = format(state.timers.black);
+    document.getElementById('whiteTimer').className = `timer ${state.turn==='white'?'active':''}`;
+    document.getElementById('blackTimer').className = `timer ${state.turn==='black'?'active':''}`;
+}
+
+function showStatus(msg, isError = false) {
+    const el = document.getElementById('status');
+    el.textContent = msg;
+    el.style.color = isError ? '#ff5252' : '#ffeb3b';
+}
+
+function saveHistorySnapshot() {
+    const snapshot = JSON.parse(JSON.stringify({
+        board: state.board,
+        turn: state.turn,
+        castling: state.castling,
+        enPassant: state.enPassant,
+        config: state.config,
+        assassinsPlaced: state.assassinsPlaced,
+        moveList: state.moveList,
+        timers: state.timers
+    }));
+    state.history = state.history.slice(0, state.historyIndex + 1);
+    state.history.push(snapshot);
+    state.historyIndex++;
+}
+
+function undo() {
+    if (state.historyIndex > 0) {
+        state.historyIndex--;
+        restoreSnapshot(state.history[state.historyIndex]);
+    }
+}
+
+function redo() {
+    if (state.historyIndex < state.history.length - 1) {
+        state.historyIndex++;
+        restoreSnapshot(state.history[state.historyIndex]);
+    }
+}
+
+function restoreSnapshot(snap) {
+    state.board = JSON.parse(JSON.stringify(snap.board)); 
+    state.turn = snap.turn;
+    state.castling = JSON.parse(JSON.stringify(snap.castling));
+    state.enPassant = snap.enPassant;
+    state.assassinsPlaced = JSON.parse(JSON.stringify(snap.assassinsPlaced));
+    state.moveList = [...snap.moveList];
+    state.timers = {...snap.timers};
+    state.selected = null;
+    state.moves = [];
+    state.promotion = null;
+    state.winner = null;
+    render();
+}
+
+function saveGame() {
+    const data = JSON.stringify(state);
+    const blob = new Blob([data], {type: 'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'special-chess.json';
+    a.click();
+}
+
+function loadGame() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = evt => initGame(JSON.parse(evt.target.result));
+        reader.readAsText(file);
+    };
+    input.click();
 }
 
 // --- RENDER ---
-
 function render() {
-    const el = document.getElementById('board'); el.innerHTML = '';
-    const turnTxt = document.getElementById('turnDisplay');
-    const statusTxt = document.getElementById('status');
     const isW = state.turn === 'white';
     
-    turnTxt.textContent = state.winner ? "Game Over" : `${state.turn.charAt(0).toUpperCase() + state.turn.slice(1)}'s Turn`;
-    statusTxt.textContent = '';
+    document.getElementById('turnDisplay').textContent = state.winner || `${state.turn.toUpperCase()}'s Turn`;
+    showStatus('');
     
     if (state.winner) {
-        statusTxt.textContent = state.winner;
-        statusTxt.style.color = '#4CAF50';
-    } else if (state.mode === 'assassin' && !state.assassinsPlaced[state.turn.charAt(0)]) {
-        statusTxt.textContent = `Place your Assassin on rank ${isW ? 3 : 6} (in front of a pawn)`; 
-        statusTxt.style.color = '#ff9800';
-    } else if (inCheck(state.turn)) {
-        statusTxt.textContent = hasMoves(state.turn) ? "Check!" : "Checkmate!";
-        statusTxt.style.color = '#ff5252';
+        showStatus(state.winner);
+    } else if (state.config.assassin && !state.assassinsPlaced[isW?'w':'b']) {
+        showStatus(`Place your Assassin on Rank ${isW?3:6} (Front of Pawn)`);
+    } else {
+        const myKing = findKing(state.turn);
+        if (myKing && isAttacked(myKing, state.turn, state.board)) {
+            let hasMove = false;
+            for(let r=0; r<8; r++) for(let c=0; c<8; c++) {
+                const p = state.board[r][c];
+                if(p && ((isW && p===p.toUpperCase()) || (!isW && p===p.toLowerCase()))) {
+                    if(getSafeMoves(r,c,p).length > 0) { hasMove=true; break; }
+                }
+            }
+            showStatus(hasMove ? "Check!" : "Checkmate!", !hasMove);
+            if (!hasMove) state.winner = (isW ? "Black" : "White") + " Wins!";
+        }
     }
 
-    // Render Board
+    const el = document.getElementById('board'); 
+    el.innerHTML = '';
     state.board.forEach((row, r) => row.forEach((p, c) => {
         const div = document.createElement('div');
         div.className = `square ${(r+c)%2 ? 'dark' : 'light'}`;
@@ -255,549 +578,71 @@ function render() {
         if (p) {
             const pColor = p === p.toUpperCase() ? 'white' : 'black';
             const isMine = pColor === state.turn;
-            const hidden = isHidden(r, c, state.board);
-            let showPiece = true;
-            let isGhost = false;
+            let show = true;
+            let opacity = 1;
 
-            if (hidden) {
-                if (isMine && state.showMyHidden) isGhost = true;
-                else showPiece = false;
+            if (state.config.assassin && p.toLowerCase() === 'a') {
+                const hidden = getEffectivePiece(r, c, state.board) === null;
+                if (hidden) {
+                    if (isMine && state.showMyHidden) { opacity = 0.5; }
+                    else { show = false; }
+                } else if (!hidden) {
+                    div.classList.add('revealed');
+                }
             }
 
-            if (showPiece) {
+            if (show) {
                 div.textContent = SYMBOLS[p];
-                if (isGhost) div.classList.add('ghost');
-                if (!hidden && p.toLowerCase() === 'a') div.classList.add('revealed');
+                div.style.opacity = opacity;
+                if (p.toLowerCase() === 'k' && inCheck(pColor)) div.classList.add('check');
             }
-            if (p.toLowerCase() === 'k' && isMine && inCheck(state.turn) && !state.winner) div.classList.add('check');
         }
-
-        if (state.selected && state.selected.r === r && state.selected.c === c) div.classList.add('selected');
+        
+        if (state.selected?.r === r && state.selected?.c === c) div.classList.add('selected');
         
         const move = state.moves.find(m => m.r === r && m.c === c);
         if (move) {
-            const visibleTarget = getEffectivePiece(r, c, state.board);
-            const isVisibleCapture = visibleTarget !== null || move.enPassant;
-            div.classList.add(isVisibleCapture ? 'capture' : 'hint');
+            const target = getEffectivePiece(r, c, state.board);
+            div.classList.add((target || move.enPassant) ? 'capture' : 'hint');
         }
 
         div.onclick = () => handleClick(r, c);
         el.appendChild(div);
     }));
 
-    // Render Promotion Modal
-    const modal = document.getElementById('promotionModal');
+    const toggle = (id, cond) => document.getElementById(id).classList.toggle('hidden', !cond);
+    toggle('timerContainer', state.config.timer);
+    toggle('assassinControls', state.config.assassin);
+    toggle('moveHistory', state.moveList.length > 0);
+    toggle('promotionModal', !!state.promotion);
+
+    document.getElementById('btnAssassin').textContent = state.showMyHidden ? "👁️ Hide Assassin" : "👁️ Show Assassin";
+
+    const histEl = document.getElementById('moveHistory');
+    histEl.innerHTML = state.moveList.map((m, i) => `<div>${Math.floor(i/2)+1}.${i%2?'..':''} ${m}</div>`).join('');
+    histEl.scrollTop = histEl.scrollHeight;
+    
     if (state.promotion) {
-        modal.style.display = 'flex';
-        const container = document.getElementById('promoOptions');
-        container.innerHTML = '';
-        
-        let options = ['q', 'r', 'b', 'n'];
-        if (state.mode === 'dinosaur') options.push('t');
-        if (state.mode === 'assassin') options.push('a');
-        
-        options.forEach(type => {
-            const btn = document.createElement('button');
-            const pieceChar = isW ? type.toUpperCase() : type;
-            btn.className = 'promo-btn';
-            btn.textContent = SYMBOLS[pieceChar];
-            btn.onclick = () => completePromotion(pieceChar);
-            container.appendChild(btn);
-        });
-    } else {
-        modal.style.display = 'none';
-    }
-
-    // Render Move History
-    renderMoveHistory();
-}
-
-// --- INTERACTION ---
-
-function handleClick(r, c) {
-    if (state.winner || state.promotion) return; // Block interaction if promoting
-    const isW = state.turn === 'white';
-    
-    if (state.mode === 'assassin' && !state.assassinsPlaced[isW?'w':'b']) {
-        const pawnRow = isW ? 6 : 1;
-        const targetRow = isW ? 5 : 2; 
-        if (r === targetRow && state.board[pawnRow][c] === (isW?'P':'p') && !state.board[r][c]) {
-            state.board[r][c] = isW ? 'A' : 'a';
-            state.assassinsPlaced[isW?'w':'b'] = true;
-            nextTurn();
-            saveToHistory();
-        } else {
-            document.getElementById('status').textContent = "Invalid placement.";
-        }
-        return;
-    }
-
-    const move = state.moves.find(m => m.r === r && m.c === c);
-    if (move) {
-        executeMove(move);
-        return;
-    } 
-    
-    const p = state.board[r][c];
-    if (p) {
-        const pColor = p === p.toUpperCase() ? 'white' : 'black';
-        if (pColor === state.turn) {
-            state.selected = {r, c};
-            state.moves = getSafeMoves(r, c, p);
-            render();
-            return;
-        }
-    }
-    
-    state.selected = null;
-    state.moves = [];
-    render();
-}
-
-// --- MOVE LOGIC ---
-
-function executeMove(move) {
-    const {r, c} = state.selected;
-    const p = state.board[r][c];
-    const isW = state.turn === 'white';
-    const captured = state.board[move.r][move.c] || (move.enPassant ? state.board[r][move.c] : null);
-    
-    // Move
-    state.board[move.r][move.c] = p;
-    state.board[r][c] = null;
-    if (move.enPassant) state.board[r][move.c] = null;
-    
-    // Castling
-    if (move.castle) {
-        const row = isW ? 7 : 0;
-        const rookCol = move.castle === 'k' ? 7 : 0;
-        const targetRookCol = move.castle === 'k' ? 5 : 3;
-        state.board[row][targetRookCol] = state.board[row][rookCol];
-        state.board[row][rookCol] = null;
-    }
-
-    // Update EP / Castling Rights
-    state.enPassant = (p.toLowerCase() === 'p' && Math.abs(move.r - r) === 2) 
-        ? { r: (r + move.r) / 2, c: c } : null;
-        
-    if (p.toLowerCase() === 'k') state.castling[isW?'w':'b'] = {k:0, q:0};
-    if (p.toLowerCase() === 'r') {
-        if (c === 0) state.castling[isW?'w':'b'].q = 0;
-        if (c === 7) state.castling[isW?'w':'b'].k = 0;
-    }
-
-    // Add to move history before checking promotion
-    const moveData = { from: {r, c}, to: {r: move.r, c: move.c}, captured, promotion: null };
-    
-    // Check Promotion
-    if (p.toLowerCase() === 'p' && (move.r === 0 || move.r === 7)) {
-        state.promotion = { r: move.r, c: move.c, moveData };
-        state.selected = null;
-        state.moves = [];
-        render();
-        return; // Pause here
-    }
-
-    addMoveToHistory(moveData, p, captured, null);
-    nextTurn();
-    saveToHistory();
-}
-
-function completePromotion(pieceChar) {
-    if (!state.promotion) return;
-    const {r, c, moveData} = state.promotion;
-    state.board[r][c] = pieceChar;
-    moveData.promotion = pieceChar;
-    addMoveToHistory(moveData, pieceChar, null, pieceChar);
-    state.promotion = null;
-    nextTurn();
-    saveToHistory();
-}
-
-function nextTurn() {
-    const wKing = findKing(state.board, 'white');
-    const bKing = findKing(state.board, 'black');
-    if (!wKing) state.winner = "Black Wins!";
-    else if (!bKing) state.winner = "White Wins!";
-    
-    if (state.winner) {
-        render();
-        return;
-    }
-
-    state.turn = state.turn === 'white' ? 'black' : 'white';
-    state.selected = null;
-    state.moves = [];
-    state.showMyHidden = false; 
-    updateTimerDisplay();
-    render();
-}
-
-// --- GENERATION & VALIDATION ---
-
-function getSafeMoves(r, c, p) {
-    return generateMoves(r, c, p, state.board).filter(m => {
-        const savedBoard = state.board.map(row => [...row]);
-        savedBoard[m.r][m.c] = savedBoard[r][c]; 
-        savedBoard[r][c] = null;
-        if (m.enPassant) savedBoard[r][m.c] = null;
-        
-        const myKing = findKing(savedBoard, state.turn);
-        if (!myKing) return false;
-        
-        // Pass current state.board as visibility reference to avoid "future reveal" bug
-        return !isAttacked(myKing, state.turn, savedBoard, state.board);
-    });
-}
-
-function generateMoves(r, c, p, board, checkCastling = true) {
-    const moves = [];
-    const type = p.toLowerCase();
-    const isW = p === p.toUpperCase();
-    const opp = (pc) => pc && (isW ? pc === pc.toLowerCase() : pc === pc.toUpperCase());
-    const add = (tr, tc, extra={}) => { if(onBoard(tr, tc)) moves.push({r:tr, c:tc, ...extra}); };
-
-    if (type === 'p') {
-        const dir = isW ? -1 : 1;
-        const start = isW ? 6 : 1;
-        if (onBoard(r+dir, c)) {
-            if (getEffectivePiece(r+dir, c, board) === null) {
-                add(r+dir, c);
-                if (r === start && getEffectivePiece(r+dir*2, c, board) === null) {
-                    add(r+dir*2, c);
-                }
-            }
-        }
-        [[r+dir, c-1], [r+dir, c+1]].forEach(([tr, tc]) => {
-            if (onBoard(tr, tc)) {
-                const target = getEffectivePiece(tr, tc, board);
-                if (target && opp(target)) {
-                    add(tr, tc);
-                } else if (state.enPassant && state.enPassant.r === tr && state.enPassant.c === tc) {
-                    add(tr, tc, { enPassant: true });
-                }
-            }
-        });
-    }
-    else if (type === 'a') {
-        for(let dr=-2; dr<=2; dr++) {
-            for(let dc=-2; dc<=2; dc++) {
-                if(dr===0 && dc===0) continue;
-                const tr = r+dr, tc = c+dc;
-                if(!onBoard(tr, tc)) continue;
-                
-                const dist = Math.max(Math.abs(dr), Math.abs(dc));
-                const targetEff = getEffectivePiece(tr, tc, board);
-                
-                if (dist === 2) {
-                    if (targetEff === null) add(tr, tc);
-                } else { 
-                    if (targetEff === null || opp(targetEff)) add(tr, tc);
-                }
-            }
-        }
-    }
-    else if (['n','k'].includes(type)) {
-        const vecs = type==='n' ? VECTORS.knight : [...VECTORS.orthogonals, ...VECTORS.diagonals];
-        vecs.forEach(([dr, dc]) => {
-            const tr=r+dr, tc=c+dc;
-            if (onBoard(tr, tc)) {
-                const target = getEffectivePiece(tr, tc, board);
-                if (!target || opp(target)) add(tr, tc);
-            }
-        });
-        if (type === 'k' && checkCastling && !inCheck(state.turn)) {
-            const row = isW ? 7 : 0;
-            const rights = isW ? state.castling.w : state.castling.b;
-            if (rights.k && !getEffectivePiece(row, 5, board) && !getEffectivePiece(row, 6, board) && !isAttacked({r:row, c:5}, state.turn, board)) add(row, 6, {castle: 'k'});
-            if (rights.q && !getEffectivePiece(row, 1, board) && !getEffectivePiece(row, 2, board) && !getEffectivePiece(row, 3, board) && !isAttacked({r:row, c:3}, state.turn, board)) add(row, 2, {castle: 'q'});
-        }
-    }
-    else { 
-        const dirs = type==='b' ? VECTORS.diagonals : type==='r' ? VECTORS.orthogonals : [...VECTORS.orthogonals, ...VECTORS.diagonals];
-        dirs.forEach(([dr, dc]) => {
-            for (let i=1; i<8; i++) {
-                const tr=r+dr*i, tc=c+dc*i;
-                if (!onBoard(tr, tc)) break;
-                const target = getEffectivePiece(tr, tc, board);
-                if (target === null) add(tr, tc);
-                else {
-                    if (opp(target)) add(tr, tc);
-                    break; 
-                }
-            }
-        });
-        if (type === 't') {
-            VECTORS.knight.forEach(([dr, dc]) => {
-                const tr=r+dr, tc=c+dc;
-                if(onBoard(tr, tc)) {
-                    const target = getEffectivePiece(tr, tc, board);
-                    if (!target || opp(target)) add(tr, tc);
-                }
+        const opts = document.getElementById('promoOptions');
+        opts.innerHTML = '';
+        ['q','r','b','n', (state.config.dino?'t':null), (state.config.assassin?'a':null)]
+            .filter(x=>x).forEach(t => {
+                const b = document.createElement('button');
+                b.textContent = SYMBOLS[isW ? t.toUpperCase() : t];
+                b.onclick = () => completePromotion(t);
+                opts.appendChild(b);
             });
-        }
     }
-    return moves;
-}
 
-function findKing(b, color) {
-    for(let r=0; r<8; r++) for(let c=0; c<8; c++) if(b[r][c] === (color==='white'?'K':'k')) return {r, c};
-    return null;
+    if (state.config.timer) renderTimer();
 }
 
 function inCheck(color) {
-    const kPos = findKing(state.board, color);
-    if (!kPos) return false;
-    // Current board state for both geometry and visibility
-    return isAttacked(kPos, color, state.board, state.board);
+    const k = findKing(color);
+    return k && isAttacked(k, color, state.board);
 }
 
-function isAttacked(pos, color, board, visibilityBoard) {
-    const visRef = visibilityBoard || board;
-    for(let r=0; r<8; r++) for(let c=0; c<8; c++) {
-        const p = board[r][c];
-        if (p && ((color === 'white' && p === p.toLowerCase()) || (color === 'black' && p === p.toUpperCase()))) {
-            
-            // Check visibility against Current State (visRef)
-            if (isHidden(r, c, visRef)) continue;
-            
-            const moves = generateMoves(r, c, p, board, false);
-            if (moves.some(m => m.r === pos.r && m.c === pos.c)) return true;
-        }
-    }
-    return false;
-}
-
-function hasMoves(color) {
-    if (state.winner) return false;
-    for(let r=0; r<8; r++) for(let c=0; c<8; c++) {
-        const p = state.board[r][c];
-        if (p && (color==='white'?p===p.toUpperCase():p===p.toLowerCase())) {
-            if (getSafeMoves(r, c, p).length > 0) return true;
-        }
-    }
-    return false;
-}
-
-function onBoard(r, c) { return r >= 0 && r < 8 && c >= 0 && c < 8; }
-function toggleView() { 
-    state.showMyHidden = !state.showMyHidden; 
-    const btn = document.getElementById('btnAssassin');
-    btn.textContent = state.showMyHidden ? '👁️ Hide Assassin' : '👁️ Show Assassin';
-    render(); 
-}
-
-// --- MOVE HISTORY ---
-
-function squareToNotation(r, c) {
-    const files = 'abcdefgh';
-    return files[c] + (8 - r);
-}
-
-function pieceToNotation(piece) {
-    const notations = { 'K': 'K', 'Q': 'Q', 'R': 'R', 'B': 'B', 'N': 'N', 'P': '', 'T': 'D', 'A': 'A' };
-    return notations[piece.toUpperCase()] || '';
-}
-
-function createMoveNotation(from, to, piece, captured, promotion) {
-    let notation = pieceToNotation(piece);
-    if (piece.toUpperCase() === 'P') {
-        notation = captured ? squareToNotation(from.r, from.c)[0] : '';
-    }
-    notation += captured ? 'x' : '';
-    notation += squareToNotation(to.r, to.c);
-    if (promotion) notation += '=' + pieceToNotation(promotion);
-    return notation;
-}
-
-function addMoveToHistory(move, piece, captured, promotion) {
-    const notation = createMoveNotation(move.from, move.to, piece, captured, promotion);
-    state.moveHistory.push(notation);
-    state.moveCount++;
-}
-
-function renderMoveHistory() {
-    const historyEl = document.getElementById('moveHistory');
-    historyEl.innerHTML = '';
-    
-    for (let i = 0; i < state.moveHistory.length; i += 2) {
-        const moveNum = Math.floor(i / 2) + 1;
-        const whiteMove = state.moveHistory[i];
-        const blackMove = state.moveHistory[i + 1];
-        
-        const entry = document.createElement('div');
-        entry.className = 'move-entry';
-        entry.innerHTML = `<span class="move-number">${moveNum}.</span> ${whiteMove}${blackMove ? ' ' + blackMove : ''}`;
-        historyEl.appendChild(entry);
-    }
-    
-    historyEl.scrollTop = historyEl.scrollHeight;
-}
-
-// --- UNDO/REDO ---
-
-function saveToHistory() {
-    const stateCopy = JSON.parse(JSON.stringify(state));
-    state.history = state.history.slice(0, state.historyIndex + 1);
-    state.history.push(stateCopy);
-    state.historyIndex++;
-}
-
-function undo() {
-    if (state.historyIndex > 0) {
-        state.historyIndex--;
-        const prevState = JSON.parse(JSON.stringify(state.history[state.historyIndex]));
-        Object.assign(state, prevState);
-        updateTimerDisplay();
-        render();
-    }
-}
-
-function redo() {
-    if (state.historyIndex < state.history.length - 1) {
-        state.historyIndex++;
-        const nextState = JSON.parse(JSON.stringify(state.history[state.historyIndex]));
-        Object.assign(state, nextState);
-        updateTimerDisplay();
-        render();
-    }
-}
-
-// --- TIMER ---
-
-function formatTime(seconds) {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-}
-
-function updateTimerDisplay() {
-    const whiteTimer = document.getElementById('whiteTimer');
-    const blackTimer = document.getElementById('blackTimer');
-    
-    whiteTimer.querySelector('.timer-time').textContent = formatTime(state.timers.white);
-    blackTimer.querySelector('.timer-time').textContent = formatTime(state.timers.black);
-    
-    whiteTimer.classList.toggle('active', state.turn === 'white' && !state.winner);
-    blackTimer.classList.toggle('active', state.turn === 'black' && !state.winner);
-}
-
-function startTimer() {
-    if (!state.timerEnabled) return;
-    if (state.timerInterval) clearInterval(state.timerInterval);
-    
-    state.timerInterval = setInterval(() => {
-        if (state.winner) {
-            clearInterval(state.timerInterval);
-            return;
-        }
-        
-        const currentColor = state.turn;
-        state.timers[currentColor]--;
-        
-        if (state.timers[currentColor] <= 0) {
-            state.timers[currentColor] = 0;
-            state.winner = currentColor === 'white' ? 'Black wins on time!' : 'White wins on time!';
-            clearInterval(state.timerInterval);
-        }
-        
-        updateTimerDisplay();
-    }, 1000);
-    
-    updateTimerDisplay();
-}
-
-// --- SAVE/LOAD ---
-
-function saveGame() {
-    const gameState = {
-        board: state.board,
-        turn: state.turn,
-        castling: state.castling,
-        enPassant: state.enPassant,
-        mode: state.mode,
-        assassinsPlaced: state.assassinsPlaced,
-        showMyHidden: state.showMyHidden,
-        promotion: state.promotion,
-        winner: state.winner,
-        moveHistory: state.moveHistory,
-        moveCount: state.moveCount,
-        timers: state.timers,
-        timerEnabled: state.timerEnabled
-    };
-    
-    const gameData = JSON.stringify(gameState);
-    const blob = new Blob([gameData], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `chess-game-${new Date().toISOString().slice(0, 10)}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-}
-
-function loadGame() {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    input.onchange = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            try {
-                const gameState = JSON.parse(event.target.result);
-                
-                // Validate and restore state
-                state.board = gameState.board;
-                state.turn = gameState.turn;
-                state.castling = gameState.castling;
-                state.enPassant = gameState.enPassant;
-                state.mode = gameState.mode;
-                state.assassinsPlaced = gameState.assassinsPlaced;
-                state.showMyHidden = gameState.showMyHidden;
-                state.promotion = gameState.promotion;
-                state.winner = gameState.winner;
-                state.moveHistory = gameState.moveHistory || [];
-                state.moveCount = gameState.moveCount || 0;
-                state.timers = gameState.timers || { white: 600, black: 600 };
-                state.timerEnabled = gameState.timerEnabled !== undefined ? gameState.timerEnabled : true;
-                state.history = [];
-                state.historyIndex = -1;
-                
-                // Update UI
-                const assassinEnabled = state.mode === 'assassin' || state.mode === 'hybrid';
-                document.getElementById('assassinControls').style.display = assassinEnabled ? 'flex' : 'none';
-                document.getElementById('rules').style.display = assassinEnabled ? 'block' : 'none';
-                document.getElementById('moveHistory').style.display = 'block';
-                document.getElementById('timerContainer').style.display = state.timerEnabled ? 'flex' : 'none';
-                
-                // Update checkboxes to match loaded game
-                document.getElementById('timerOption').checked = state.timerEnabled;
-                document.getElementById('dinosaurOption').checked = state.mode === 'dinosaur' || state.mode === 'hybrid';
-                document.getElementById('assassinOption').checked = assassinEnabled;
-                
-                if (state.timerInterval) clearInterval(state.timerInterval);
-                startTimer();
-                saveToHistory();
-                render();
-                
-                document.getElementById('status').textContent = 'Game loaded successfully!';
-                document.getElementById('status').style.color = '#4CAF50';
-            } catch (error) {
-                document.getElementById('status').textContent = 'Error loading game file';
-                document.getElementById('status').style.color = '#ff5252';
-            }
-        };
-        reader.readAsText(file);
-    };
-    input.click();
-}
-
-initGame('standard');
+initGame();
 </script>
 </body>
 </html>

@@ -1,0 +1,2 @@
+#!/bin/bash
+scp chess-assassin.html illuminu@burt.id.au:dave.burt.id.au/chess.html
