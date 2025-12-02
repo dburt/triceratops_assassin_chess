@@ -58,6 +58,20 @@ A feature-rich chess game with special pieces and variants, built as a single HT
 
 ## Planned Additions
 
+### Core Chess Rules
+- Threefold repetition detection and draw claims
+- Fifty-move rule (50 moves without pawn move/capture)
+- Insufficient material detection (K vs K, K+B vs K, etc.)
+- Proper castling legality (can't castle through check)
+- En passant capture timing restrictions
+- Promotion piece validation (no pawn/king promotions)
+- Multiple piece check detection
+- Discovered check handling
+- Pin detection (pinned pieces can't expose king)
+- Resignation and draw offer buttons
+- Proper timeout handling
+
+### User Experience
 - Network multiplayer (WebRTC peer-to-peer)
 - Drag-and-drop piece movement
 - Sound effects for moves/captures/check
