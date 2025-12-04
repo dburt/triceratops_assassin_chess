@@ -1,2 +1,3 @@
 #!/bin/bash
-scp chess.html illuminu@burt.id.au:dave.burt.id.au/chess.html
+set -ex
+scp index.html style.css script.js illuminu@burt.id.au:dave.burt.id.au/chess/

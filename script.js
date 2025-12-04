@@ -1,134 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Special Chess</title>
-<style>
-    :root { --bg: #2d2d2d; --text: #eee; --board-border: #555; --light: #e0c090; --dark: #8a6040; --select: #7fc97f; --check: #ff5252; }
-    body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: var(--bg); color: var(--text); padding: 10px; margin: 0; }
-    h1 { margin: 5px 0; }
-    
-    /* Board */
-    .board-container { position: relative; margin: 10px 0; }
-    .board { display: grid; grid-template-columns: repeat(8, minmax(30px, min(8vw, 45px))); border: 3px solid var(--board-border); user-select: none; touch-action: manipulation; width: 100%; max-width: min(72vw, 360px); margin: 0 auto; }
-    .square { aspect-ratio: 1; display: flex; justify-content: center; align-items: center; font-size: clamp(20px, min(5vw, 32px), 32px); cursor: pointer; position: relative; }
-    .light { background: var(--light); color: black; } 
-    .dark { background: var(--dark); color: black; }
-    
-    /* Piece States */
-    .selected { background: var(--select) !important; }
-    .check { background: var(--check) !important; }
-    .hint::after { content: ''; position: absolute; width: 20%; height: 20%; background: rgba(0,0,0,0.3); border-radius: 50%; }
-    .capture { background: #ff9800 !important; }
-    .capture::after { content: ''; position: absolute; inset: 0; border: 4px solid rgba(180, 0, 0, 0.6); border-radius: 50%; }
-    .ghost { opacity: 0.5; filter: grayscale(100%); }
-    .revealed { outline: 3px dashed #d00; outline-offset: -3px; background-color: rgba(255, 0, 0, 0.2); }
-
-    /* UI Elements */
-    .controls, .game-options, .timer-container { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
-    .timer-container { flex-direction: row; justify-content: space-between; }
-    
-    .timer { background: #333; border-radius: 8px; padding: 10px; text-align: center; flex: 1; border: 2px solid transparent; }
-    .timer.active { border-color: #4CAF50; }
-    .timer-time { font-size: 1.2em; font-weight: bold; font-family: monospace; }
-    
-    .btn-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
-    button { padding: 8px 16px; background: #444; color: white; border: 1px solid #666; border-radius: 4px; cursor: pointer; font-size: 14px; }
-    button:hover { background: #555; }
-    button.primary { background: #4CAF50; border-color: #4CAF50; }
-    button.primary:hover { background: #45a049; }
-    
-    .game-options { background: #333; padding: 10px; border-radius: 8px; }
-    .opt-row { display: flex; align-items: center; justify-content: space-between; margin: 5px 0; }
-    .opt-row.horizontal { flex-direction: row; justify-content: space-around; flex-wrap: wrap; }
-    .opt-item { display: flex; align-items: center; gap: 5px; min-width: 80px; }
-    .opt-item span { font-size: clamp(20px, min(5vw, 32px), 32px); }
-    .info-bubble { position: relative; display: inline-block; cursor: help; }
-    .info-bubble .tooltip { visibility: hidden; width: 220px; background: #555; color: #fff; text-align: left; border-radius: 6px; padding: 8px; position: absolute; z-index: 1; bottom: 125%; left: 50%; margin-left: -100px; opacity: 0; transition: opacity 0.3s; font-size: 11px; line-height: 1.3; }
-    .info-bubble:hover .tooltip { visibility: visible; opacity: 1; }
-    
-    #status { height: 20px; color: #ffeb3b; font-weight: bold; text-align: center; }
-    #moveHistory { max-height: 100px; overflow-y: auto; background: #222; padding: 5px; font-family: monospace; font-size: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
-    
-    /* Modal */
-    .modal { position: absolute; inset: 0; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10; }
-    .promo-opts button { font-size: 32px; width: 50px; height: 50px; margin: 5px; }
-
-    .hidden { display: none !important; }
-</style>
-</head>
-<body>
-
-    <h1>Special Chess</h1>
-    <div id="turnDisplay">White's Turn</div>
-    
-    <div class="board-container">
-        <div id="board" class="board"></div>
-        <!-- Promotion Modal -->
-        <div id="promotionModal" class="modal hidden">
-            <h3 style="color:white">Promote to:</h3>
-            <div id="promoOptions" class="promo-opts"></div>
-        </div>
-    </div>
-
-    <div id="status"></div>
-
-    <div class="timer-container hidden" id="timerContainer">
-        <div id="whiteTimer" class="timer"><div class="lbl">White</div><div class="timer-time">10:00</div></div>
-        <div id="blackTimer" class="timer"><div class="lbl">Black</div><div class="timer-time">10:00</div></div>
-    </div>
-
-    <!-- Controls -->
-    <div class="controls">
-        <div class="btn-row hidden" id="assassinControls">
-            <button id="btnAssassin" onclick="toggleAssassinView()">👁️ Show Assassin</button>
-        </div>
-        <div class="btn-row">
-            <button onclick="undo()">↶ Undo</button>
-            <button onclick="redo()">↷ Redo</button>
-            <button onclick="saveGame()">💾 Save</button>
-            <button onclick="loadGame()">📁 Load</button>
-        </div>
-    </div>
-
-    <!-- History -->
-    <div id="moveHistory" class="hidden"></div>
-
-    <!-- Options -->
-    <div class="game-options">
-        <div class="opt-row horizontal">
-            <div class="opt-item">
-                <label>
-                    <span>⏱️</span>
-                    <input type="checkbox" id="optTimer" checked>
-                </label>
-            </div>
-            <div class="opt-item">
-                <label>
-                    <span>🦕</span>
-                    <input type="checkbox" id="optDino">
-                </label>
-            </div>
-            <div class="opt-item">
-                <label class="info-bubble">
-                    <span>🥷</span>
-                    <span class="tooltip">
-                        <strong>Assassin Rules:</strong><br>
-                        • Place in front of pawn (rank 3/6)<br>
-                        • Hidden until enemy pawn attacks or passes<br>
-                        • Moves 2 squares, captures 1<br>
-                        • Can be blind-captured
-                    </span>
-                    <input type="checkbox" id="optAssassin">
-                </label>
-            </div>
-        </div>
-        <div class="btn-row" style="margin-top:10px">
-            <button class="primary" onclick="initGame()">🎮 Start New Game</button>
-        </div>
-    </div>
-
-<script>
 // --- CONSTANTS & CONFIG ---
 const SYMBOLS = { 
     'K':'♔','Q':'♕','R':'♖','B':'♗','N':'♘','P':'♙','T':'🦕','A':'🥷🏻',
@@ -141,6 +10,13 @@ const VECTORS = {
 };
 
 // --- GLOBAL STATE ---
+let network = {
+    peer: null,
+    conn: null,
+    mySide: null, // 'white' or 'black' (Host is always White)
+    isConnected: false
+};
+
 let state = {
     board: [],
     turn: 'white',
@@ -153,19 +29,22 @@ let state = {
     showMyHidden: false,
     promotion: null,
     winner: null,
-    history: [],    // For Undo/Redo (Snapshots)
-    moveList: [],   // For Display (Notation)
+    history: [],    
+    moveList: [],   
     historyIndex: -1,
     timers: { white: 600, black: 600 },
     timerInterval: null
 };
 
 // --- INITIALIZATION ---
-function initGame(loadedState = null) {
+function initGame(loadedState = null, isNetworkStart = false) {
     if (state.timerInterval) clearInterval(state.timerInterval);
 
+    // If starting a network game as Host, we use current UI config. 
+    // If joining, we wait for config sync.
     if (loadedState) {
         state = loadedState;
+        // In network play, resume timer if game not over
         if (state.config.timer && !state.winner) startTimer();
     } else {
         const config = {
@@ -189,13 +68,20 @@ function initGame(loadedState = null) {
             history: [],
             moveList: [],
             historyIndex: -1,
-            timers: { white: 600, black: 600 },
+            timers: { white: 600, black: 600 }, // Default 10 mins
             timerInterval: null
         };
         saveHistorySnapshot(); 
         if (config.timer) startTimer();
     }
     
+    // In network mode, disable options if we are not the host setting it up initially
+    if (network.isConnected) {
+        document.getElementById('gameOptions').classList.add('hidden');
+    } else {
+        document.getElementById('gameOptions').classList.remove('hidden');
+    }
+
     render();
 }
 
@@ -235,7 +121,15 @@ function getEffectivePiece(r, c, board) {
 }
 
 function handleClick(r, c) {
-    if (state.winner || state.promotion) return;
+    // Network Guard: Prevent moving if not connected OR if it's not my turn
+    if (network.isConnected) {
+        if (state.turn !== network.mySide) return; // Not my turn
+        if (state.winner) return;
+    } else {
+        // Local play: allow both sides
+        if (state.winner || state.promotion) return;
+    }
+
     const isW = state.turn === 'white';
     
     // Assassin Setup
@@ -244,9 +138,10 @@ function handleClick(r, c) {
         const pawnRow = isW ? 6 : 1;
         const myPawn = isW ? 'P' : 'p';
         if (r === validRow && !state.board[r][c] && state.board[pawnRow][c] === myPawn) {
+            // Apply Setup
             state.board[r][c] = isW ? 'A' : 'a';
             state.assassinsPlaced[isW ? 'w' : 'b'] = true;
-            endTurn();
+            endTurn(); // This will trigger network sync
         } else {
             showStatus("Must place Assassin in front of a pawn!", true);
         }
@@ -262,6 +157,9 @@ function handleClick(r, c) {
 
     const p = state.board[r][c];
     if (p && (p === p.toUpperCase()) === isW) {
+        // Only select own pieces
+        if (network.isConnected && (isW ? 'white' : 'black') !== network.mySide) return;
+
         state.selected = {r, c};
         state.moves = getSafeMoves(r, c, p);
     } else {
@@ -276,7 +174,7 @@ function makeMove(move) {
     const p = state.board[r][c];
     const isW = p === p.toUpperCase();
     
-    // Notation
+    // Notation Logic
     const captured = state.board[move.r][move.c];
     let notation = p.toUpperCase() === 'P' && captured ? "px" : (p.toUpperCase() !== 'P' ? p.toUpperCase() : "");
     if (captured && p.toUpperCase() !== 'P') notation += "x";
@@ -296,7 +194,7 @@ function makeMove(move) {
         state.board[row][rSrc] = null;
     }
 
-    // Update Rights
+    // Rights
     if (p.toLowerCase() === 'k') state.castling[isW?'w':'b'] = {k:false, q:false};
     if (p.toLowerCase() === 'r') {
         if (c === 0) state.castling[isW?'w':'b'].q = false;
@@ -312,7 +210,7 @@ function makeMove(move) {
         return;
     }
 
-    // Add to move history - show "A??" for hidden assassins
+    // History
     if (p.toLowerCase() === 'a' && getEffectivePiece(r, c, state.board) === null) {
         state.moveList.push("A??");
     } else {
@@ -324,8 +222,12 @@ function makeMove(move) {
 function completePromotion(type) {
     const { r, c, notationBase } = state.promotion;
     const isW = state.turn === 'white';
+    
+    // In network game, only current player can select promotion
+    if (network.isConnected && network.mySide !== state.turn) return;
+
     state.board[r][c] = isW ? type.toUpperCase() : type.toLowerCase();
-    // Add assassin promotions to history
+    
     if (type.toLowerCase() === 'a' && getEffectivePiece(r, c, state.board) === null) {
         state.moveList.push("A??=" + type.toUpperCase());
     } else {
@@ -349,10 +251,17 @@ function endTurn() {
         state.turn = state.turn === 'white' ? 'black' : 'white';
         saveHistorySnapshot();
     }
+    
     render();
+
+    // If Networked, send the new state to the peer
+    if (network.isConnected && network.conn) {
+        sendStateToPeer();
+    }
 }
 
-// --- MOVEMENT HELPERS ---
+// --- MOVEMENT & CHESS LOGIC ---
+// (Logic largely identical to original to preserve game rules)
 
 function getSafeMoves(r, c, p) {
     return generateMoves(r, c, p, state.board).filter(m => {
@@ -373,7 +282,6 @@ function generateMoves(r, c, p, board, checkCastle = true) {
     const onBoard = (tr, tc) => tr >= 0 && tr < 8 && tc >= 0 && tc < 8;
     const add = (tr, tc, extra={}) => { if (onBoard(tr,tc)) moves.push({r:tr, c:tc, ...extra}); };
 
-    // 1. Pawn
     if (type === 'p') {
         const dir = isW ? -1 : 1;
         if (onBoard(r+dir, c) && !getEffectivePiece(r+dir, c, board)) {
@@ -391,9 +299,7 @@ function generateMoves(r, c, p, board, checkCastle = true) {
                 add(tr, tc, { enPassant: true });
             }
         });
-    } 
-    // 2. Assassin
-    else if (type === 'a') {
+    } else if (type === 'a') {
         for (let dr = -2; dr <= 2; dr++) {
             for (let dc = -2; dc <= 2; dc++) {
                 if (dr===0 && dc===0) continue;
@@ -405,10 +311,7 @@ function generateMoves(r, c, p, board, checkCastle = true) {
                 else if (dist === 1 && (target === null || opp(target))) add(tr, tc);
             }
         }
-    }
-    // 3. Others (Knight, Bishop, Rook, Queen, King, Dinosaur)
-    else {
-        // A. Jumps (Knight OR Dinosaur)
+    } else {
         if (type === 'n' || type === 't') {
             VECTORS.knight.forEach(([dr, dc]) => {
                 const tr = r + dr, tc = c + dc;
@@ -418,37 +321,23 @@ function generateMoves(r, c, p, board, checkCastle = true) {
                 }
             });
         }
-
-        // B. Sliding/Stepping (All EXCEPT Knight)
         if (type !== 'n') {
-            // Determine Vectors
-            const dirs = (type === 'b') ? VECTORS.diag :
-                         (type === 'r') ? VECTORS.orth :
-                         [...VECTORS.diag, ...VECTORS.orth]; // Q, K, T use both
-            
-            // Determine if Sliding (K is step, T/Q/R/B are slide)
+            const dirs = (type === 'b') ? VECTORS.diag : (type === 'r') ? VECTORS.orth : [...VECTORS.diag, ...VECTORS.orth]; 
             const slide = ['q','r','b','t'].includes(type);
-
             dirs.forEach(([dr, dc]) => {
                 let tr = r + dr, tc = c + dc;
                 while (onBoard(tr, tc)) {
                     const target = getEffectivePiece(tr, tc, board);
-                    if (target) {
-                        if (opp(target)) add(tr, tc);
-                        break;
-                    }
+                    if (target) { if (opp(target)) add(tr, tc); break; }
                     add(tr, tc);
-                    if (!slide) break; // King stops after 1
+                    if (!slide) break;
                     tr += dr; tc += dc;
                 }
             });
-
-            // Castling (King only)
             if (type === 'k' && checkCastle && !isAttacked({r,c}, isW?'white':'black', board)) {
                 const rights = isW ? state.castling.w : state.castling.b;
                 const row = isW ? 7 : 0;
                 const checkEmpty = (cols) => cols.every(col => !getEffectivePiece(row, col, board));
-                
                 if (rights.k && checkEmpty([5,6]) && !isAttacked({r:row, c:5}, isW?'white':'black', board)) 
                     add(row, 6, {castle: 'k'});
                 if (rights.q && checkEmpty([1,2,3]) && !isAttacked({r:row, c:3}, isW?'white':'black', board)) 
@@ -480,7 +369,7 @@ function findKing(color, board = state.board) {
     return null;
 }
 
-// --- UTILITIES ---
+// --- UI UTILITIES ---
 
 function toggleAssassinView() {
     state.showMyHidden = !state.showMyHidden;
@@ -488,8 +377,11 @@ function toggleAssassinView() {
 }
 
 function startTimer() {
+    if(state.timerInterval) clearInterval(state.timerInterval);
     state.timerInterval = setInterval(() => {
         if (state.winner) return clearInterval(state.timerInterval);
+        
+        // Host manages the authoritative time, but both decrement visually
         if (state.timers[state.turn] > 0) {
             state.timers[state.turn]--;
             renderTimer();
@@ -497,6 +389,7 @@ function startTimer() {
             state.winner = (state.turn === 'white' ? 'Black' : 'White') + " wins on time!";
             render();
             clearInterval(state.timerInterval);
+            if (network.isConnected) sendStateToPeer();
         }
     }, 1000);
 }
@@ -532,6 +425,7 @@ function saveHistorySnapshot() {
 }
 
 function undo() {
+    if (network.isConnected) return showStatus("Undo disabled in network play", true);
     if (state.historyIndex > 0) {
         state.historyIndex--;
         restoreSnapshot(state.history[state.historyIndex]);
@@ -539,6 +433,7 @@ function undo() {
 }
 
 function redo() {
+    if (network.isConnected) return showStatus("Redo disabled in network play", true);
     if (state.historyIndex < state.history.length - 1) {
         state.historyIndex++;
         restoreSnapshot(state.history[state.historyIndex]);
@@ -577,7 +472,11 @@ function loadGame() {
         const file = e.target.files[0];
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = evt => initGame(JSON.parse(evt.target.result));
+        reader.onload = evt => {
+            initGame(JSON.parse(evt.target.result));
+            // Sync loaded game if networking
+            if(network.isConnected) sendStateToPeer();
+        };
         reader.readAsText(file);
     };
     input.click();
@@ -586,18 +485,31 @@ function loadGame() {
 // --- RENDER ---
 function render() {
     const isW = state.turn === 'white';
+    const turnText = state.winner || `${state.turn.toUpperCase()}'s Turn`;
     
-    document.getElementById('turnDisplay').textContent = state.winner || `${state.turn.toUpperCase()}'s Turn`;
+    // Update Turn Display with Network Info
+    let headerText = turnText;
+    if (network.isConnected) {
+        headerText += network.mySide ? ` (You are ${network.mySide})` : '';
+    }
+    document.getElementById('turnDisplay').textContent = headerText;
+    
     showStatus('');
     
+    // Status Logic
     if (state.winner) {
         showStatus(state.winner);
-    } else if (state.config.assassin && !state.assassinsPlaced[isW?'w':'b']) {
-        showStatus(`Place your Assassin on Rank ${isW?3:6} (Front of Pawn)`);
+    } else if (state.config.assassin && !state.assassinsPlaced[state.turn === 'white'?'w':'b']) {
+        if (!network.isConnected || network.mySide === state.turn) {
+            showStatus(`Place your Assassin on Rank ${state.turn==='white'?3:6} (Front of Pawn)`);
+        } else {
+            showStatus("Opponent placing Assassin...");
+        }
     } else {
         const myKing = findKing(state.turn);
         if (myKing && isAttacked(myKing, state.turn, state.board)) {
             let hasMove = false;
+            // Heavy check for mate
             for(let r=0; r<8; r++) for(let c=0; c<8; c++) {
                 const p = state.board[r][c];
                 if(p && ((isW && p===p.toUpperCase()) || (!isW && p===p.toLowerCase()))) {
@@ -611,44 +523,59 @@ function render() {
 
     const el = document.getElementById('board'); 
     el.innerHTML = '';
-    state.board.forEach((row, r) => row.forEach((p, c) => {
-        const div = document.createElement('div');
-        div.className = `square ${(r+c)%2 ? 'dark' : 'light'}`;
-        
-        if (p) {
-            const pColor = p === p.toUpperCase() ? 'white' : 'black';
-            const isMine = pColor === state.turn;
-            let show = true;
-            let opacity = 1;
+    
+    // Optional: Rotate board for Black player
+    const rotate = network.isConnected && network.mySide === 'black';
 
-            if (state.config.assassin && p.toLowerCase() === 'a') {
-                const hidden = getEffectivePiece(r, c, state.board) === null;
-                if (hidden) {
-                    if (isMine && state.showMyHidden) { opacity = 0.5; }
-                    else { show = false; }
-                } else if (!hidden) {
-                    div.classList.add('revealed');
+    for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+            // Apply rotation if needed
+            const drawR = rotate ? 7 - r : r;
+            const drawC = rotate ? 7 - c : c;
+            
+            const p = state.board[drawR][drawC];
+            const div = document.createElement('div');
+            div.className = `square ${(drawR+drawC)%2 ? 'dark' : 'light'}`;
+            
+            if (p) {
+                const pColor = p === p.toUpperCase() ? 'white' : 'black';
+                const isMine = network.isConnected ? (pColor === network.mySide) : (pColor === state.turn);
+                
+                let show = true;
+                let opacity = 1;
+
+                if (state.config.assassin && p.toLowerCase() === 'a') {
+                    const hidden = getEffectivePiece(drawR, drawC, state.board) === null;
+                    if (hidden) {
+                        // If I am the owner of this hidden piece
+                        const amIOwner = network.isConnected ? (pColor === network.mySide) : (pColor === state.turn);
+                        
+                        if (amIOwner && state.showMyHidden) { opacity = 0.5; }
+                        else { show = false; }
+                    } else if (!hidden) {
+                        div.classList.add('revealed');
+                    }
+                }
+
+                if (show) {
+                    div.textContent = SYMBOLS[p];
+                    div.style.opacity = opacity;
+                    if (p.toLowerCase() === 'k' && inCheck(pColor)) div.classList.add('check');
                 }
             }
-
-            if (show) {
-                div.textContent = SYMBOLS[p];
-                div.style.opacity = opacity;
-                if (p.toLowerCase() === 'k' && inCheck(pColor)) div.classList.add('check');
+            
+            if (state.selected?.r === drawR && state.selected?.c === drawC) div.classList.add('selected');
+            
+            const move = state.moves.find(m => m.r === drawR && m.c === drawC);
+            if (move) {
+                const target = getEffectivePiece(drawR, drawC, state.board);
+                div.classList.add((target || move.enPassant) ? 'capture' : 'hint');
             }
-        }
-        
-        if (state.selected?.r === r && state.selected?.c === c) div.classList.add('selected');
-        
-        const move = state.moves.find(m => m.r === r && m.c === c);
-        if (move) {
-            const target = getEffectivePiece(r, c, state.board);
-            div.classList.add((target || move.enPassant) ? 'capture' : 'hint');
-        }
 
-        div.onclick = () => handleClick(r, c);
-        el.appendChild(div);
-    }));
+            div.onclick = () => handleClick(drawR, drawC);
+            el.appendChild(div);
+        }
+    }
 
     const toggle = (id, cond) => document.getElementById(id).classList.toggle('hidden', !cond);
     toggle('timerContainer', state.config.timer);
@@ -662,16 +589,21 @@ function render() {
     histEl.innerHTML = state.moveList.map((m, i) => `<div>${Math.floor(i/2)+1}.${i%2?'..':''} ${m}</div>`).join('');
     histEl.scrollTop = histEl.scrollHeight;
     
+    // Render Promo Options
     if (state.promotion) {
-        const opts = document.getElementById('promoOptions');
-        opts.innerHTML = '';
-        ['q','r','b','n', (state.config.dino?'t':null), (state.config.assassin?'a':null)]
-            .filter(x=>x).forEach(t => {
-                const b = document.createElement('button');
-                b.textContent = SYMBOLS[isW ? t.toUpperCase() : t];
-                b.onclick = () => completePromotion(t);
-                opts.appendChild(b);
-            });
+        // Only show promo options if it's my turn/piece
+        const canPromote = !network.isConnected || network.mySide === state.turn;
+        if (canPromote) {
+            const opts = document.getElementById('promoOptions');
+            opts.innerHTML = '';
+            ['q','r','b','n', (state.config.dino?'t':null), (state.config.assassin?'a':null)]
+                .filter(x=>x).forEach(t => {
+                    const b = document.createElement('button');
+                    b.textContent = SYMBOLS[isW ? t.toUpperCase() : t];
+                    b.onclick = () => completePromotion(t);
+                    opts.appendChild(b);
+                });
+        }
     }
 
     if (state.config.timer) renderTimer();
@@ -682,7 +614,141 @@ function inCheck(color) {
     return k && isAttacked(k, color, state.board);
 }
 
+// --- NETWORKING (PeerJS Implementation) ---
+
+function toggleNetworkMode() {
+    const networkControls = document.getElementById('networkControls');
+    const isHidden = networkControls.classList.contains('hidden');
+    networkControls.classList.toggle('hidden');
+    document.getElementById('networkBtn').textContent = isHidden ? '🌐 Network Play' : '🎮 Local Play';
+    
+    // If opening controls and not connected/initialized, init Peer
+    if (!isHidden && !network.peer) {
+        initPeer();
+    }
+}
+
+function updateConnectionStatus(status, roomCode = null) {
+    const statusEl = document.getElementById('statusText');
+    const roomEl = document.getElementById('roomCodeContainer');
+    
+    statusEl.textContent = status;
+    statusEl.className = status.toLowerCase().includes('connected') ? 'connected' : 
+                         status.toLowerCase().includes('connecting') ? 'connecting' : 'disconnected';
+    
+    if (roomCode) {
+        document.getElementById('roomCode').textContent = roomCode;
+        roomEl.classList.remove('hidden');
+    } else if (status === 'Disconnected') {
+        roomEl.classList.add('hidden');
+    }
+}
+
+function initPeer() {
+    updateConnectionStatus('Connecting to server...');
+    // Create Peer object. PeerJS auto-connects to their free cloud server.
+    network.peer = new Peer(null, {
+        debug: 2
+    });
+
+    network.peer.on('open', (id) => {
+        updateConnectionStatus('Server Connected. Create or Join.', null);
+    });
+
+    network.peer.on('connection', (conn) => {
+        // Incoming connection (I am Host)
+        handleConnection(conn, true);
+    });
+
+    network.peer.on('disconnected', () => updateConnectionStatus('Disconnected from server'));
+    network.peer.on('error', (err) => showStatus(`Network Error: ${err.type}`, true));
+}
+
+function createRoom() {
+    if (!network.peer || network.peer.disconnected) initPeer();
+    
+    // Just wait for connection. My ID is the room code.
+    const myId = network.peer.id;
+    updateConnectionStatus('Waiting for opponent...', myId);
+    network.mySide = 'white'; // Host is white
+}
+
+function showJoinDialog() {
+    document.getElementById('joinDialog').classList.remove('hidden');
+}
+function closeJoinDialog() {
+    document.getElementById('joinDialog').classList.add('hidden');
+}
+
+function joinRoom() {
+    const roomId = document.getElementById('roomInput').value.trim();
+    if (!roomId) return;
+    closeJoinDialog();
+    updateConnectionStatus('Connecting to peer...');
+    
+    const conn = network.peer.connect(roomId);
+    handleConnection(conn, false);
+}
+
+function handleConnection(conn, isHost) {
+    network.conn = conn;
+    network.isConnected = true;
+    network.mySide = isHost ? 'white' : 'black';
+
+    conn.on('open', () => {
+        updateConnectionStatus('Connected to Game!');
+        showStatus(`Game Started! You are ${network.mySide}`);
+        
+        if (isHost) {
+            // Host sends initial state
+            initGame(); // Reset to fresh
+            sendStateToPeer();
+        }
+    });
+
+    conn.on('data', (data) => {
+        // Receive data
+        if (data.type === 'state') {
+            state = data.state;
+            // Fix timer interval loss on serialization
+            if (state.config.timer && !state.winner) startTimer();
+            render();
+        }
+    });
+
+    conn.on('close', () => {
+        showStatus('Opponent disconnected', true);
+        disconnectNetwork();
+    });
+}
+
+function sendStateToPeer() {
+    if (network.conn && network.conn.open) {
+        // Clear interval before sending to avoid cyclic structure or useless data
+        const cleanState = { ...state, timerInterval: null };
+        network.conn.send({
+            type: 'state',
+            state: cleanState
+        });
+    }
+}
+
+function disconnectNetwork() {
+    if (network.conn) network.conn.close();
+    network.isConnected = false;
+    network.conn = null;
+    network.mySide = null;
+    updateConnectionStatus('Disconnected');
+    document.getElementById('gameOptions').classList.remove('hidden');
+    initGame(); // Reset to local
+}
+
+function copyRoomCode() {
+    const code = document.getElementById('roomCode').textContent;
+    navigator.clipboard.writeText(code).then(() => {
+        showStatus("Room ID copied to clipboard!");
+    });
+}
+
+// Start local game initially
 initGame();
-</script>
-</body>
-</html>
