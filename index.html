@@ -29,6 +29,25 @@
         <div id="blackTimer" class="timer"><div class="lbl">Black</div><div class="timer-time">10:00</div></div>
     </div>
 
+    <!-- History -->
+    <div id="moveHistory" class="hidden"></div>
+
+    <!-- Main Controls -->
+    <div class="controls">
+        <div class="btn-row hidden" id="assassinControls">
+            <button id="btnAssassin" onclick="toggleAssassinView()">👁️ Show Assassin</button>
+        </div>
+        <div class="btn-row">
+            <button onclick="undo()">↶ Undo</button>
+            <button onclick="redo()">↷ Redo</button>
+            <button onclick="saveGame()">💾 Save</button>
+            <button onclick="loadGame()">📁 Load</button>
+	</div>
+        <div class="btn-row">
+            <button onclick="toggleNetworkMode()" id="networkBtn">🌐 Network Play</button>
+        </div>
+    </div>
+
     <!-- Network Game Controls -->
     <div class="network-controls hidden" id="networkControls">
         <div class="btn-row">
@@ -44,23 +63,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Main Controls -->
-    <div class="controls">
-        <div class="btn-row hidden" id="assassinControls">
-            <button id="btnAssassin" onclick="toggleAssassinView()">👁️ Show Assassin</button>
-        </div>
-        <div class="btn-row">
-            <button onclick="toggleNetworkMode()" id="networkBtn">🌐 Network Play</button>
-            <button onclick="undo()">↶ Undo</button>
-            <button onclick="redo()">↷ Redo</button>
-            <button onclick="saveGame()">💾 Save</button>
-            <button onclick="loadGame()">📁 Load</button>
-        </div>
-    </div>
-
-    <!-- History -->
-    <div id="moveHistory" class="hidden"></div>
 
     <!-- Game Options -->
     <div class="game-options" id="gameOptions">

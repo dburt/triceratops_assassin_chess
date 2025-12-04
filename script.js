@@ -618,8 +618,8 @@ function inCheck(color) {
 
 function toggleNetworkMode() {
     const networkControls = document.getElementById('networkControls');
-    const isHidden = networkControls.classList.contains('hidden');
     networkControls.classList.toggle('hidden');
+    const isHidden = networkControls.classList.contains('hidden');
     document.getElementById('networkBtn').textContent = isHidden ? '🌐 Network Play' : '🎮 Local Play';
     
     // If opening controls and not connected/initialized, init Peer
