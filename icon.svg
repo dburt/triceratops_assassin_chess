@@ -1,0 +1,38 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="64" height="64" fill="#2d2d2d" rx="8"/>
+  
+  <!-- Left Pawn with Assassin Head -->
+  <g transform="translate(16, 32)">
+    <!-- Pawn body -->
+    <circle cx="0" cy="8" r="6" fill="#f0f0f0"/>
+    <rect x="-6" y="2" width="12" height="12" fill="#f0f0f0"/>
+    <!-- Assassin head -->
+    <circle cx="0" cy="-4" r="5" fill="#333"/>
+    <circle cx="-2" cy="-5" r="1" fill="#ff0000"/>
+    <circle cx="2" cy="-5" r="1" fill="#ff0000"/>
+    <path d="M -3,-2 L 0,1 L 3,-2" stroke="#ff0000" stroke-width="1" fill="none"/>
+  </g>
+  
+  <!-- Right Pawn with Triceratops Head -->
+  <g transform="translate(48, 32)">
+    <!-- Pawn body -->
+    <circle cx="0" cy="8" r="6" fill="#8a6040"/>
+    <rect x="-6" y="2" width="12" height="12" fill="#8a6040"/>
+    <!-- Triceratops head -->
+    <ellipse cx="0" cy="-4" rx="6" ry="4" fill="#654321"/>
+    <!-- Horns -->
+    <polygon points="-6,-4 -8,-8 -4,-6" fill="#8b7355"/>
+    <polygon points="6,-4 8,-8 4,-6" fill="#8b7355"/>
+    <polygon points="0,-6 -1,-9 1,-9" fill="#8b7355"/>
+    <!-- Eye -->
+    <circle cx="-2" cy="-4" r="1" fill="#000"/>
+    <circle cx="2" cy="-4" r="1" fill="#000"/>
+  </g>
+  
+  <!-- Chess board pattern hint -->
+  <rect x="8" y="8" width="12" height="12" fill="#e0c090" opacity="0.3"/>
+  <rect x="44" y="8" width="12" height="12" fill="#8a6040" opacity="0.3"/>
+  <rect x="8" y="44" width="12" height="12" fill="#8a6040" opacity="0.3"/>
+  <rect x="44" y="44" width="12" height="12" fill="#e0c090" opacity="0.3"/>
+</svg>
