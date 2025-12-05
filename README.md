@@ -1,14 +1,14 @@
 # Special Chess
 
-A feature-rich chess game with special pieces and variants, built as a single HTML file with no dependencies.
+A chess game with standard mode and optional special pieces (Triceratops and Assassins), supporting both local and peer-to-peer network play. Built as a responsive web application with PWA capabilities.
 
 ## Features
 
 ### Core Chess
-- Full chess rules implementation
-- Move notation and history
-- Undo/redo functionality
-- Game save/load (JSON format)
+- Full chess rules implementation with proper move validation
+- Move notation and complete history tracking
+- Undo/redo functionality (local play only)
+- Game save/load in JSON format
 - Optional timers (10 minutes per player)
 - Proper castling legality (can't castle through check)
 - En passant capture implementation
@@ -16,30 +16,42 @@ A feature-rich chess game with special pieces and variants, built as a single HT
 
 ### Special Pieces
 
-#### 🦕 Triceratops
-- Dinosaur pieces that move like queens + knights
-- T-rex and brontosaurus emoji because Unicode doesn't yet have dark or light triceratops
+#### 🦕 Triceratops (T)
+- Moves like a queen + knight combination (Amazon piece)
+- One per side, starts at d3 (white) and d6 (black)
 - Can be combined with other variants
+- Notation: Standard algebraic with "T" for triceratops
 
-#### 🥷 Assassins
-- Hidden pieces that are invisible to opponents
-- Place in front of any pawn on rank 3 (white) or 6 (black)
-- **Hidden**: Invisible, pieces can move through, can be blind-captured
-- **Revealed**: Visible when enemy pawn attacks or has passed their rank
-- Moves 2 squares in any direction, captures only 1 square away
-- Hidden moves shown as "A??" in move history
+#### 🥷 Assassins (A)
+- **Setup Phase**: Each player places one assassin before first turn
+  - Must be placed directly in front of own pawn (rank 3 for white, rank 6 for black)
+  - Placement is hidden from opponent
+- **Movement**: Exactly 2 squares in any direction (can jump pieces)
+- **Capture**: Only 1 square away (king-like capture range)
+- **Hidden Mechanics**:
+  - Invisible to opponents when not under pawn attack
+  - Treated as empty square for movement (pieces can pass through)
+  - Can be "blind captured" by any piece landing on its square
+- **Reveal Conditions**:
+  - Enemy pawn attacks diagonally
+  - Enemy pawn has passed assassin's rank
+  - Immediately re-hides when revealing pawn moves away
+- **Notation**: "A??" for hidden moves, standard notation for revealed moves
 
 ### Network Play
 - Peer-to-peer multiplayer using WebRTC (PeerJS)
 - Create room or join with Room ID
 - Real-time game synchronization
 - Automatic board rotation for black player
+- Turn enforcement (players can only move on their turn)
 - No server required - direct browser connection
 
-### Mobile Responsive
-- Touch-friendly interface
-- Scales properly on all screen sizes
-- Optimized for both desktop and mobile play
+### User Interface
+- **Responsive Design**: Mobile-optimized vertical layout, desktop horizontal layout
+- **Touch-friendly**: Optimized for both desktop and mobile play
+- **Visual Feedback**: Selection highlighting, move hints, capture indicators
+- **PWA Support**: Service worker and manifest for offline capability
+- **Custom Icon**: SVG icon with assassin and triceratops pawn heads
 
 ## How to Play
 
@@ -54,11 +66,11 @@ A feature-rich chess game with special pieces and variants, built as a single HT
 
 3. **Controls**:
    - Click piece to select, click destination to move
-   - 👁️ Toggle assassin visibility (your own hidden assassins only)
+   - 👁️ Toggle assassin visibility (show own hidden assassins)
    - ↶↷ Undo/redo moves (local play only)
    - 💾📁 Save/load games
 
-3. **Assassin Strategy**:
+4. **Assassin Strategy**:
    - Place assassins strategically to surprise opponents
    - Hidden assassins can be captured by any piece moving onto their square
    - Reveal assassins by attacking with pawns
@@ -66,14 +78,26 @@ A feature-rich chess game with special pieces and variants, built as a single HT
 
 ## Technical
 
-- Pure HTML/CSS/JavaScript - no build process required
-- Responsive design with CSS Grid and Flexbox
-- Local storage for game persistence
-- WebRTC peer-to-peer networking via PeerJS
-- Multi-file deployment: `index.html`, `style.css`, `script.js`
-- Mostly vibe-coded with OpenCode Zen Big Pickle and Gemini 3
+- **Architecture**: Multi-file deployment with separation of concerns
+  - `index.html` - Main application structure
+  - `style.css` - Responsive styling and layout
+  - `script.js` - Game engine and UI logic
+  - `manifest.json` - PWA configuration
+  - `sw.js` - Service worker for offline support
+  - `icon.svg` - Custom game icon
+- **Technologies**: Pure HTML/CSS/JavaScript (ES6+)
+- **Responsive Design**: CSS Grid and Flexbox with mobile-first approach
+- **Networking**: WebRTC peer-to-peer via PeerJS
+- **PWA Features**: Service worker, app manifest, offline capability
+- **No Build Process**: Direct file deployment to any web server
 
-## Planned Additions
+## Browser Compatibility
+- **Modern browsers**: Full feature support
+- **iOS 12+**: Core functionality with some limitations
+- **PWA support**: Chrome, Edge, Firefox (limited Safari support)
+- **WebRTC**: Supported in all modern browsers
+
+## Future Enhancements
 
 ### Core Chess Rules
 - Resignation and draw offer buttons
@@ -91,6 +115,13 @@ A feature-rich chess game with special pieces and variants, built as a single HT
 - Keyboard navigation
 - High contrast mode
 - Tournament modes (Blitz, Bullet, Classical)
+
+### Additional Features
+- AI opponent with adjustable difficulty
+- Analysis tools and move evaluation
+- Player profiles and statistics
+- Tournament system
+- Additional special pieces and variants
 
 ## License
 

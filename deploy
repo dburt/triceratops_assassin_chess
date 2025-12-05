@@ -1,3 +1,3 @@
 #!/bin/bash
 set -ex
-scp index.html style.css script.js illuminu@burt.id.au:dave.burt.id.au/chess/
+scp index.html style.css script.js sw.js manifest.json icon.svg illuminu@burt.id.au:dave.burt.id.au/chess/
