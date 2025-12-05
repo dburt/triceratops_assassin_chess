@@ -376,6 +376,13 @@ function toggleAssassinView() {
     render();
 }
 
+function toggleGameOptions() {
+    const gameOptions = document.getElementById('gameOptions');
+    gameOptions.classList.toggle('hidden');
+    const isHidden = gameOptions.classList.contains('hidden');
+    document.getElementById('gameOptionsBtn').textContent = isHidden ? '🎮 New Game' : '❌ Close';
+}
+
 function startTimer() {
     if(state.timerInterval) clearInterval(state.timerInterval);
     state.timerInterval = setInterval(() => {

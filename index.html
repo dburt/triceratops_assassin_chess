@@ -49,9 +49,10 @@
             <button onclick="redo()">↷ Redo</button>
             <button onclick="saveGame()">💾 Save</button>
             <button onclick="loadGame()">📁 Load</button>
-	</div>
+        </div>
         <div class="btn-row">
             <button onclick="toggleNetworkMode()" id="networkBtn">🌐 Network Play</button>
+            <button onclick="toggleGameOptions()" id="gameOptionsBtn">🎮 New Game</button>
         </div>
     </div>
 
@@ -72,7 +73,7 @@
     </div>
 
     <!-- Game Options -->
-    <div class="game-options" id="gameOptions">
+    <div class="game-options hidden" id="gameOptions">
         <div class="opt-row horizontal">
             <div class="opt-item">
                 <label>
