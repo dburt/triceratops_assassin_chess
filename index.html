@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Special Chess - P2P</title>
+    <title>Special Chess</title>
     <link rel="stylesheet" href="style.css">
-    <!-- PeerJS Library for WebRTC simplified -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 </head>
 <body>
@@ -15,7 +14,6 @@
     
     <div class="board-container">
         <div id="board" class="board"></div>
-        <!-- Promotion Modal -->
         <div id="promotionModal" class="modal hidden">
             <h3 style="color:white">Promote to:</h3>
             <div id="promoOptions" class="promo-opts"></div>
@@ -25,34 +23,31 @@
     <div id="status"></div>
 
     <div class="timer-container hidden" id="timerContainer">
-        <div id="whiteTimer" class="timer"><div class="lbl">White</div><div class="timer-time">10:00</div></div>
-        <div id="blackTimer" class="timer"><div class="lbl">Black</div><div class="timer-time">10:00</div></div>
+        <div id="whiteTimer" class="timer"><div class="lbl">White</div><div class="time timer-time">10:00</div></div>
+        <div id="blackTimer" class="timer"><div class="lbl">Black</div><div class="time timer-time">10:00</div></div>
     </div>
 
-    <!-- History -->
     <div id="moveHistory" class="hidden"></div>
 
-    <!-- Main Controls -->
     <div class="controls">
         <div class="btn-row hidden" id="assassinControls">
             <button id="btnAssassin" onclick="toggleAssassinView()">👁️ Show Assassin</button>
         </div>
         <div class="btn-row">
-            <button onclick="undo()">↶ Undo</button>
-            <button onclick="redo()">↷ Redo</button>
+            <button id="btnUndo" onclick="undo()">↶ Undo</button>
+            <button id="btnRedo" onclick="redo()">↷ Redo</button>
             <button onclick="saveGame()">💾 Save</button>
             <button onclick="loadGame()">📁 Load</button>
 	</div>
         <div class="btn-row">
-            <button onclick="toggleNetworkMode()" id="networkBtn">🌐 Network Play</button>
+            <button id="btnNet" onclick="toggleNetworkMode()" id="networkBtn">🌐 Network Play</button>
         </div>
     </div>
 
-    <!-- Network Game Controls -->
     <div class="network-controls hidden" id="networkControls">
         <div class="btn-row">
             <button onclick="createRoom()" class="primary">🏠 Create Room</button>
-            <button onclick="showJoinDialog()">🔗 Join Game</button>
+            <button id="btnJoin" onclick="showJoinDialog()">🔗 Join Game</button>
             <button onclick="disconnectNetwork()" class="secondary">❌ Disconnect</button>
         </div>
         <div class="connection-status" id="connectionStatus">
@@ -64,7 +59,6 @@
         </div>
     </div>
 
-    <!-- Game Options -->
     <div class="game-options" id="gameOptions">
         <div class="opt-row horizontal">
             <div class="opt-item">
@@ -94,11 +88,10 @@
             </div>
         </div>
         <div class="btn-row" style="margin-top:10px">
-            <button class="primary" onclick="initGame()">🎮 Start New Game</button>
+            <button class="primary" id="btnStart" onclick="initGame()">🎮 Start New Game</button>
         </div>
     </div>
 
-    <!-- Join Game Dialog -->
     <div id="joinDialog" class="modal hidden">
         <div class="dialog-content">
             <h3>Join Network Game</h3>
@@ -111,6 +104,6 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script type="module" src="modules/main.js"></script>
 </body>
 </html>

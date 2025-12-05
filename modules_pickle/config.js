@@ -1,0 +1,22 @@
+// --- CONSTANTS & CONFIG ---
+export const SYMBOLS = { 
+    'K':'♔','Q':'♕','R':'♖','B':'♗','N':'♘','P':'♙','T':'🦕','A':'🥷🏻',
+    'k':'♚','q':'♛','r':'♜','b':'♝','n':'♞','p':'♟','t':'🦖','a':'🥷🏿' 
+};
+
+export const VECTORS = {
+    diag: [[1,1],[1,-1],[-1,1],[-1,-1]],
+    orth: [[1,0],[-1,0],[0,1],[0,-1]],
+    knight: [[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2]]
+};
+
+export const DEFAULT_CONFIG = {
+    timer: true,
+    dino: false,
+    assassin: false
+};
+
+export const DEFAULT_TIMERS = {
+    white: 600,
+    black: 600
+};
