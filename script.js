@@ -156,12 +156,21 @@ function handleClick(r, c) {
     }
 
     const p = state.board[r][c];
-    if (p && (p === p.toUpperCase()) === isW) {
-        // Only select own pieces
-        if (network.isConnected && (isW ? 'white' : 'black') !== network.mySide) return;
+    if (p) {
+        // Check if piece belongs to current player (including hidden assassins)
+        const pieceIsWhite = p === p.toUpperCase();
+        const pieceBelongsToCurrentPlayer = pieceIsWhite === isW;
+        
+        // Only select own pieces (including hidden assassins)
+        if (pieceBelongsToCurrentPlayer) {
+            if (network.isConnected && (isW ? 'white' : 'black') !== network.mySide) return;
 
-        state.selected = {r, c};
-        state.moves = getSafeMoves(r, c, p);
+            state.selected = {r, c};
+            state.moves = getSafeMoves(r, c, p);
+        } else {
+            state.selected = null;
+            state.moves = [];
+        }
     } else {
         state.selected = null;
         state.moves = [];
