@@ -12,10 +12,11 @@
 </head>
 <body>
 
-    <h1>Special Chess</h1>
-    <div id="turnDisplay">White's Turn</div>
-    
-    <div class="board-container">
+    <div class="main-content">
+        <h1>Special Chess</h1>
+        <div id="turnDisplay">White's Turn</div>
+        
+        <div class="board-container">
         <div id="board" class="board"></div>
         <!-- Promotion Modal -->
         <div id="promotionModal" class="modal hidden">
@@ -31,10 +32,14 @@
         <div id="blackTimer" class="timer"><div class="lbl">Black</div><div class="timer-time">10:00</div></div>
     </div>
 
-    <!-- History -->
-    <div id="moveHistory" class="hidden"></div>
+        </div>
 
-    <!-- Main Controls -->
+        <!-- History -->
+        <div id="moveHistory" class="hidden"></div>
+    </div>
+
+    <div class="side-panel">
+        <!-- Main Controls -->
     <div class="controls">
         <div class="btn-row hidden" id="assassinControls">
             <button id="btnAssassin" onclick="toggleAssassinView()">👁️ Show Assassin</button>
@@ -111,6 +116,7 @@
                 <button onclick="closeJoinDialog()">Cancel</button>
             </div>
         </div>
+    </div>
     </div>
 
     <script>

@@ -1,5 +1,10 @@
 :root { --bg: #2d2d2d; --text: #eee; --board-border: #555; --light: #e0c090; --dark: #8a6040; --select: #7fc97f; --check: #ff5252; }
 body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: var(--bg); color: var(--text); padding: 10px; margin: 0; }
+@media (min-width: 768px) {
+  body { flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: flex-start; }
+  .main-content { order: 1; }
+  .side-panel { order: 2; margin-left: 20px; }
+}
 h1 { margin: 5px 0; }
 
 /* Board */
@@ -20,6 +25,9 @@ h1 { margin: 5px 0; }
 
 /* UI Elements */
 .controls, .game-options, .timer-container { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
+@media (min-width: 768px) {
+  .controls, .game-options, .timer-container { max-width: 300px; }
+}
 .timer-container { flex-direction: row; justify-content: space-between; }
 
 .timer { background: #333; border-radius: 8px; padding: 10px; text-align: center; flex: 1; border: 2px solid transparent; }
