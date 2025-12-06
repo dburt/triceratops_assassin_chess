@@ -1,3 +1,20 @@
+// --- POLYFILLS FOR iOS 12 COMPATIBILITY ---
+// String.prototype.padStart() polyfill (should be in iOS 12 but adding fallback)
+if (!String.prototype.padStart) {
+    String.prototype.padStart = function padStart(targetLength, padString) {
+        targetLength = targetLength >> 0; //floor if number or convert non-number to 0;
+        padString = String(padString || ' ');
+        if (this.length >= targetLength) {
+            return String(this);
+        }
+        targetLength = targetLength - this.length;
+        if (targetLength > padString.length) {
+            padString += padString.repeat(targetLength / padString.length);
+        }
+        return padString.slice(0, targetLength) + String(this);
+    };
+}
+
 // --- CONSTANTS & CONFIG ---
 const SYMBOLS = { 
     'K':'♔','Q':'♕','R':'♖','B':'♗','N':'♘','P':'♙','T':'🦕','A':'🥷🏻',
@@ -289,7 +306,24 @@ function generateMoves(r, c, p, board, checkCastle = true) {
     const isW = p === p.toUpperCase();
     const opp = (pc) => pc && (isW ? pc === pc.toLowerCase() : pc === pc.toUpperCase());
     const onBoard = (tr, tc) => tr >= 0 && tr < 8 && tc >= 0 && tc < 8;
-    const add = (tr, tc, extra={}) => { if (onBoard(tr,tc)) moves.push({r:tr, c:tc, ...extra}); };
+    const add = (tr, tc, extra = {}) => {
+        if (!onBoard(tr, tc)) return;
+
+        // Prevent moving to a square occupied by a friendly hidden assassin
+        const realPiece = board[tr][tc];
+        if (realPiece) {
+            const targetPieceIsWhite = realPiece === realPiece.toUpperCase();
+
+            if (isW === targetPieceIsWhite) { // It's a friendly piece on the target square
+                // The move generation for other pieces already prevents landing on visible friendly pieces.
+                // This check is specifically for hidden friendly pieces that appear as empty squares.
+                if (realPiece.toLowerCase() === 'a' && getEffectivePiece(tr, tc, board) === null) {
+                    return; // Do not add this move.
+                }
+            }
+        }
+        moves.push({ r: tr, c: tc, ...extra });
+    };
 
     if (type === 'p') {
         const dir = isW ? -1 : 1;
@@ -580,7 +614,7 @@ function render() {
                 }
             }
             
-            if (state.selected?.r === drawR && state.selected?.c === drawC) div.classList.add('selected');
+            if (state.selected && state.selected.r === drawR && state.selected.c === drawC) div.classList.add('selected');
             
             const move = state.moves.find(m => m.r === drawR && m.c === drawC);
             if (move) {
@@ -761,9 +795,43 @@ function disconnectNetwork() {
 
 function copyRoomCode() {
     const code = document.getElementById('roomCode').textContent;
-    navigator.clipboard.writeText(code).then(() => {
-        showStatus("Room ID copied to clipboard!");
-    });
+    
+    // Try modern clipboard API first
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(code).then(() => {
+            showStatus("Room ID copied to clipboard!");
+        }).catch(() => {
+            // Fallback to older method
+            fallbackCopyTextToClipboard(code);
+        });
+    } else {
+        // Fallback for older browsers
+        fallbackCopyTextToClipboard(code);
+    }
+}
+
+function fallbackCopyTextToClipboard(text) {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.left = "-999999px";
+    textArea.style.top = "-999999px";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+            showStatus("Room ID copied to clipboard!");
+        } else {
+            showStatus("Failed to copy room ID", true);
+        }
+    } catch (err) {
+        showStatus("Failed to copy room ID", true);
+    }
+    
+    document.body.removeChild(textArea);
 }
 
 // Start local game initially

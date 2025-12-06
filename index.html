@@ -121,8 +121,17 @@
     </div>
 
     <script>
+        // Service Worker with iOS 12 compatibility check
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js');
+            // Check if we're on iOS 12 or older
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            const isOldIOS = isIOS && /OS 1[0-2]_/.test(navigator.userAgent);
+            
+            if (!isOldIOS) {
+                navigator.serviceWorker.register('/sw.js').catch(function(err) {
+                    console.log('Service Worker registration failed:', err);
+                });
+            }
         }
     </script>
     <script src="script.js"></script>

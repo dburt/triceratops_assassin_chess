@@ -9,22 +9,24 @@ const urlsToCache = [
   'https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js'
 ];
 
-self.addEventListener('install', event => {
+// Use traditional function syntax for better compatibility
+self.addEventListener('install', function(event) {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(urlsToCache))
+      .then(function(cache) {
+        return cache.addAll(urlsToCache);
+      })
   );
 });
 
-self.addEventListener('fetch', event => {
+self.addEventListener('fetch', function(event) {
   event.respondWith(
     caches.match(event.request)
-      .then(response => {
+      .then(function(response) {
         if (response) {
           return response;
         }
         return fetch(event.request);
-      }
-    )
+      })
   );
 });
