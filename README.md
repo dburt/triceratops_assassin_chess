@@ -83,7 +83,7 @@ For a reference covering all rules, features, and technical details, please see 
 - **Architecture**: Multi-file deployment with separation of concerns
   - `index.html` - Main application structure
   - `style.css` - Responsive styling and layout
-  - `script.js` - Game engine and UI logic
+  - `js/` - Directory for modular JavaScript (game engine, UI, networking)
   - `manifest.json` - PWA configuration
   - `sw.js` - Service worker for offline support
   - `icon.svg` - Custom game icon

@@ -42,32 +42,32 @@
         <!-- Main Controls -->
     <div class="controls">
         <div class="btn-row hidden" id="assassinControls">
-            <button id="btnAssassin" onclick="toggleAssassinView()">👁️ Show Assassin</button>
+            <button id="btnAssassin">👁️ Show Assassin</button>
         </div>
         <div class="btn-row">
-            <button onclick="undo()">↶ Undo</button>
-            <button onclick="redo()">↷ Redo</button>
-            <button onclick="saveGame()">💾 Save</button>
-            <button onclick="loadGame()">📁 Load</button>
+            <button id="btnUndo">↶ Undo</button>
+            <button id="btnRedo">↷ Redo</button>
+            <button id="btnSave">💾 Save</button>
+            <button id="btnLoad">📁 Load</button>
         </div>
         <div class="btn-row">
-            <button onclick="toggleNetworkMode()" id="networkBtn">🌐 Network Play</button>
-            <button onclick="toggleGameOptions()" id="gameOptionsBtn">🎮 New Game</button>
+            <button id="networkBtn">🌐 Network Play</button>
+            <button id="gameOptionsBtn">🎮 New Game</button>
         </div>
     </div>
 
     <!-- Network Game Controls -->
     <div class="network-controls hidden" id="networkControls">
         <div class="btn-row">
-            <button onclick="createRoom()" class="primary">🏠 Create Room</button>
-            <button onclick="showJoinDialog()">🔗 Join Game</button>
-            <button onclick="disconnectNetwork()" class="secondary">❌ Disconnect</button>
+            <button id="btnCreateRoom" class="primary">🏠 Create Room</button>
+            <button id="btnJoinGame">🔗 Join Game</button>
+            <button id="btnDisconnect" class="secondary">❌ Disconnect</button>
         </div>
         <div class="connection-status" id="connectionStatus">
             <div id="statusText">Not connected</div>
             <div id="roomCodeContainer" class="hidden">
                 Your ID: <span id="roomCode" class="room-code">...</span>
-                <button class="small-btn" onclick="copyRoomCode()">📋 Copy</button>
+                <button id="btnCopyCode" class="small-btn">📋 Copy</button>
             </div>
         </div>
     </div>
@@ -102,7 +102,7 @@
             </div>
         </div>
         <div class="btn-row" style="margin-top:10px">
-            <button class="primary" onclick="initGame()">🎮 Start New Game</button>
+            <button id="btnNewGame" class="primary">🎮 Start New Game</button>
         </div>
     </div>
 
@@ -113,8 +113,8 @@
             <p>Paste the Room ID from your friend:</p>
             <input type="text" id="roomInput" placeholder="Paste Room ID here..." style="width: 250px; padding: 8px; margin: 10px 0; font-size: 14px;">
             <div class="btn-row">
-                <button onclick="joinRoom()" class="primary">Join</button>
-                <button onclick="closeJoinDialog()">Cancel</button>
+                <button id="btnJoinRoomDialog" class="primary">Join</button>
+                <button id="btnCancelJoin">Cancel</button>
             </div>
         </div>
     </div>
@@ -128,12 +128,12 @@
             const isOldIOS = isIOS && /OS 1[0-2]_/.test(navigator.userAgent);
             
             if (!isOldIOS) {
-                navigator.serviceWorker.register('/sw.js').catch(function(err) {
+                navigator.serviceWorker.register('sw.js').catch(function(err) {
                     console.log('Service Worker registration failed:', err);
                 });
             }
         }
     </script>
-    <script src="script.js"></script>
+    <script src="js/main.js" type="module"></script>
 </body>
 </html>

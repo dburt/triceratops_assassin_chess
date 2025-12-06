@@ -2,7 +2,7 @@
   "name": "Triceratops Assassin Chess",
   "short_name": "Special Chess",
   "description": "Chess variant with Triceratops and Assassin pieces",
-  "start_url": "/chess",
+  "start_url": "/chess/",
   "display": "standalone",
   "background_color": "#2d2d2d",
   "theme_color": "#2d2d2d",
