@@ -1,4 +1,4 @@
-const CACHE_NAME = 'special-chess-v1';
+const CACHE_NAME = 'special-chess-v2';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -9,7 +9,7 @@ const urlsToCache = [
   'https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js'
 ];
 
-// Use traditional function syntax for better compatibility
+// Install: Cache all the essential assets
 self.addEventListener('install', function(event) {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -19,14 +19,35 @@ self.addEventListener('install', function(event) {
   );
 });
 
+// Activate: Clean up old caches
+self.addEventListener('activate', function(event) {
+  event.waitUntil(
+    caches.keys().then(function(cacheNames) {
+      return Promise.all(
+        cacheNames.filter(function(cacheName) {
+          return cacheName.startsWith('special-chess-') && cacheName !== CACHE_NAME;
+        }).map(function(cacheName) {
+          return caches.delete(cacheName);
+        })
+      );
+    })
+  );
+});
+
+// Fetch: Network-first, then cache
 self.addEventListener('fetch', function(event) {
   event.respondWith(
-    caches.match(event.request)
-      .then(function(response) {
-        if (response) {
-          return response;
-        }
-        return fetch(event.request);
-      })
+    fetch(event.request).then(function(response) {
+      // Network request was successful.
+      // Cache the new response and return it.
+      return caches.open(CACHE_NAME).then(function(cache) {
+        cache.put(event.request, response.clone());
+        return response;
+      });
+    }).catch(function() {
+      // Network request failed.
+      // Try to get the response from the cache.
+      return caches.match(event.request);
+    })
   );
 });
