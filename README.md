@@ -2,6 +2,8 @@
 
 A chess game with standard mode and optional special pieces (Triceratops and Assassins), supporting both local and peer-to-peer network play. Built as a responsive web application with PWA capabilities.
 
+For a reference covering all rules, features, and technical details, please see the **[Game Specification](spec.md)**.
+
 ## Features
 
 ### Core Chess
