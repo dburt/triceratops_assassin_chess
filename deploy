@@ -1,3 +1,3 @@
 #!/bin/bash
 set -ex
-rsync -r js index.html style.css sw.js manifest.json icon.svg illuminu@burt.id.au:dave.burt.id.au/chess/
+rsync -r js index.html style.css sw.js manifest.json images/icon.svg illuminu@burt.id.au:dave.burt.id.au/chess/
