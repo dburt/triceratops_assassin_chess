@@ -145,8 +145,6 @@ export function toggleAssassinView() {
 export function toggleGameOptions() {
     const gameOptions = document.getElementById('gameOptions');
     gameOptions.classList.toggle('hidden');
-    const isHidden = gameOptions.classList.contains('hidden');
-    document.getElementById('gameOptionsBtn').textContent = isHidden ? '🎮 New Game' : '❌ Close';
 }
 
 export function showJoinDialog() {

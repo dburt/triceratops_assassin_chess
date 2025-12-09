@@ -1,5 +1,5 @@
 :root { --bg: #2d2d2d; --text: #eee; --board-border: #555; --light: #e0c090; --dark: #8a6040; --select: #7fc97f; --check: #ff5252; }
-body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: var(--bg); color: var(--text); padding: 10px; margin: 0; }
+body { font-family: 'Palatino', 'Baskerville', 'Georgia', serif; display: flex; flex-direction: column; align-items: center; background: var(--bg); color: var(--text); padding: 10px; margin: 0; }
 @media (min-width: 768px) {
   body { flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: flex-start; }
   .main-content { order: 1; display: flex; flex-direction: column; align-items: center; }
@@ -10,14 +10,14 @@ h1 { margin: 5px 0; }
 /* Board */
 .board-container { position: relative; margin: 10px 0; }
 .board { display: grid; grid-template-columns: repeat(8, 12.5%); grid-template-rows: repeat(8, 12.5%); width: 100%; max-width: 360px; height: 360px; margin: 0 auto; border: 3px solid var(--board-border); user-select: none; touch-action: manipulation; }
-.square { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; font-size: 20px; cursor: pointer; position: relative; }
+.square { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; font-size: 24px; cursor: pointer; position: relative; }
 @media (min-width: 768px) {
   .board { width: 400px; height: 400px; }
-  .square { font-size: 32px; }
+  .square { font-size: 38px; }
 }
 @media (max-width: 767px) {
   .board { width: 90vw; height: 90vw; max-width: 360px; max-height: 360px; }
-  .square { font-size: 4vw; }
+  .square { font-size: 5vw; }
 }
 .light { background: var(--light); color: black; } 
 .dark { background: var(--dark); color: black; }
@@ -41,7 +41,7 @@ h1 { margin: 5px 0; }
 
 .timer { background: #333; border-radius: 8px; padding: 10px; text-align: center; flex: 1; border: 2px solid transparent; }
 .timer.active { border-color: #4CAF50; }
-.timer-time { font-size: 1.2em; font-weight: bold; font-family: monospace; }
+.timer-time { font-size: 1.2em; font-weight: bold; font-family: 'Palatino', 'Baskerville', 'Georgia', serif; }
 
 .btn-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 button { padding: 8px 16px; background: #444; color: white; border: 1px solid #666; border-radius: 4px; cursor: pointer; font-size: 14px; }
@@ -52,6 +52,7 @@ button.secondary { background: #f44336; border-color: #d32f2f; }
 button.small-btn { padding: 2px 8px; font-size: 12px; margin-left: 10px; }
 
 .game-options { background: #333; padding: 10px; border-radius: 8px; }
+.game-options:not(.hidden) { background: #2a2a2a; }
 .opt-row { display: flex; align-items: center; justify-content: space-between; margin: 5px 0; }
 .opt-row.horizontal { flex-direction: row; justify-content: space-around; flex-wrap: wrap; }
 .opt-item { display: flex; align-items: center; gap: 5px; min-width: 80px; }
@@ -64,14 +65,15 @@ button.small-btn { padding: 2px 8px; font-size: 12px; margin-left: 10px; }
 .info-bubble:hover .tooltip { visibility: visible; opacity: 1; }
 
 .network-controls { background: #444; padding: 10px; border-radius: 8px; margin-bottom: 10px; }
+.network-controls:not(.hidden) { background: #333; }
 .connection-status { display: flex; flex-direction: column; align-items: center; gap: 5px; margin-top: 10px; padding: 8px; background: #333; border-radius: 4px; }
-.room-code { font-family: monospace; font-weight: bold; color: #4CAF50; font-size: 14px; user-select: all; }
+.room-code { font-family: 'Palatino', 'Baskerville', 'Georgia', serif; font-weight: bold; color: #4CAF50; font-size: 14px; user-select: all; }
 .connected { color: #4CAF50; }
 .connecting { color: #ff9800; }
 .disconnected { color: #f44336; }
 
 #status { height: 20px; color: #ffeb3b; font-weight: bold; text-align: center; margin: 5px 0; }
-#moveHistory { max-height: 100px; overflow-y: auto; background: #222; padding: 5px; font-family: monospace; font-size: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+#moveHistory { max-height: 120px; overflow-y: auto; background: #222; padding: 8px; font-family: 'Palatino', 'Baskerville', 'Georgia', serif; font-size: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin: 15px 0; }
 
 /* Modal */
 .modal { position: absolute; inset: 0; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10; }

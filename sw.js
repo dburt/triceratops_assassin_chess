@@ -9,7 +9,7 @@ const urlsToCache = [
   '/chess/js/network.js',
   '/chess/js/state.js',
   '/chess/js/config.js',
-  '/chess/icon.svg',
+  '/chess/images/icon.svg',
   '/chess/manifest.json',
   'https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js'
 ];

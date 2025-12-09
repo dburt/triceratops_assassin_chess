@@ -89,8 +89,9 @@ function generateMoves(r, c, p, board, checkCastle = true) {
         if (realPiece) {
             const targetPieceIsWhite = realPiece === realPiece.toUpperCase();
             if (isW === targetPieceIsWhite) {
-                if (realPiece.toLowerCase() === 'a' && getEffectivePiece(tr, tc, board) === null) {
-                    return; 
+                // Allow capturing own assassin (it will be handled in move execution)
+                if (realPiece.toLowerCase() !== 'a') {
+                    return;
                 }
             }
         }
@@ -172,6 +173,15 @@ export function makeMove(move) {
     const isW = p === p.toUpperCase();
     
     const captured = state.board[move.r][move.c];
+    
+    // Check if trying to capture own assassin
+    if (captured && captured.toLowerCase() === 'a' && 
+        ((isW && captured === 'A') || (!isW && captured === 'a'))) {
+        if (!confirm('Are you sure you want to capture your own assassin?')) {
+            return; // Cancel the move
+        }
+    }
+    
     let notation = p.toUpperCase() === 'P' && captured ? "px" : (p.toUpperCase() !== 'P' ? p.toUpperCase() : "");
     if (captured && p.toUpperCase() !== 'P') notation += "x";
     const files = "abcdefgh";

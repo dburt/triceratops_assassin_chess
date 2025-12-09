@@ -218,10 +218,8 @@ function loadGame() {
 function toggleNetworkMode() {
     const networkControls = document.getElementById('networkControls');
     networkControls.classList.toggle('hidden');
-    const isHidden = networkControls.classList.contains('hidden');
-    document.getElementById('networkBtn').textContent = isHidden ? '🌐 Network Play' : '🎮 Local Play';
     
-    if (!isHidden && !network.peer) {
+    if (!networkControls.classList.contains('hidden') && !network.peer) {
         initPeer();
     }
 }
