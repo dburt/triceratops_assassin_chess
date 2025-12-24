@@ -13,7 +13,8 @@ export function render(handleClick, completePromotion) {
         headerText += network.mySide ? ` (You are ${network.mySide})` : '';
     }
     document.getElementById('turnDisplay').textContent = headerText;
-    
+
+    updateMaterialCount();
     showStatus('');
     
     if (state.winner) {
@@ -200,4 +201,44 @@ function fallbackCopyTextToClipboard(text) {
         showStatus("Failed to copy room ID", true);
     }
     document.body.removeChild(textArea);
+}
+
+/**
+ * Calculates and displays material count
+ */
+export function updateMaterialCount() {
+    const materialValues = {
+        'p': 1, 'P': 1,
+        'n': 3, 'N': 3,
+        'b': 3, 'B': 3,
+        'r': 5, 'R': 5,
+        'q': 9, 'Q': 9,
+        't': 12, 'T': 12, // Triceratops (queen + knight)
+        'a': 3, 'A': 3    // Assassin (similar to knight)
+    };
+
+    let whiteMaterial = 0;
+    let blackMaterial = 0;
+
+    for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+            const piece = state.board[r][c];
+            if (piece && piece !== piece.toUpperCase()) {
+                blackMaterial += materialValues[piece] || 0;
+            } else if (piece) {
+                whiteMaterial += materialValues[piece] || 0;
+            }
+        }
+    }
+
+    const diff = whiteMaterial - blackMaterial;
+    const materialEl = document.getElementById('materialCount');
+
+    if (diff === 0) {
+        materialEl.innerHTML = '<span>Material: Equal</span>';
+    } else if (diff > 0) {
+        materialEl.innerHTML = `<span>Material: <span class="material-advantage white">White +${diff}</span></span>`;
+    } else {
+        materialEl.innerHTML = `<span>Material: <span class="material-advantage black">Black +${Math.abs(diff)}</span></span>`;
+    }
 }

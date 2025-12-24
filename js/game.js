@@ -4,6 +4,12 @@ import { VECTORS } from './config.js';
 
 // --- BOARD & PIECE LOGIC ---
 
+/**
+ * Creates a new chess board with optional special pieces
+ * @param {Object} config - Game configuration
+ * @param {boolean} config.dino - Whether to include triceratops pieces
+ * @returns {Array<Array<string|null>>} 8x8 board array with piece codes
+ */
 export function createBoard(config) {
     const b = Array(8).fill(null).map(() => Array(8).fill(null));
     const setRow = (r, p) => p.forEach((type, c) => b[r][c] = type);
@@ -16,6 +22,13 @@ export function createBoard(config) {
     return b;
 }
 
+/**
+ * Gets the effective piece at a position (handles hidden assassins)
+ * @param {number} r - Row (0-7)
+ * @param {number} c - Column (0-7)
+ * @param {Array} board - Board state
+ * @returns {string|null} Piece code or null if empty/hidden
+ */
 export function getEffectivePiece(r, c, board) {
     const p = board[r][c];
     if (!p) return null;
@@ -37,6 +50,12 @@ export function getEffectivePiece(r, c, board) {
     return p;
 }
 
+/**
+ * Finds the king's position for a given color
+ * @param {string} color - 'white' or 'black'
+ * @param {Array} board - Board state (defaults to current state.board)
+ * @returns {{r: number, c: number}|null} King position or null if not found
+ */
 export function findKing(color, board = state.board) {
     const k = color === 'white' ? 'K' : 'k';
     for(let r=0; r<8; r++) for(let c=0; c<8; c++) if (board[r][c] === k) return {r, c};
@@ -65,6 +84,13 @@ export function inCheck(color) {
 
 // --- MOVE GENERATION ---
 
+/**
+ * Gets all legal moves for a piece (filters out moves that would leave king in check)
+ * @param {number} r - Piece row (0-7)
+ * @param {number} c - Piece column (0-7)
+ * @param {string} p - Piece code (e.g., 'P', 'n', 'Q')
+ * @returns {Array<{r: number, c: number}>} Array of valid move destinations
+ */
 export function getSafeMoves(r, c, p) {
     return generateMoves(r, c, p, state.board).filter(m => {
         const simBoard = state.board.map(row => [...row]);
@@ -167,6 +193,10 @@ function generateMoves(r, c, p, board, checkCastle = true) {
 
 // --- MOVE EXECUTION ---
 
+/**
+ * Executes a move on the board and handles special moves (castling, en passant, promotion)
+ * @param {{r: number, c: number, castle?: string, enPassant?: boolean}} move - Move destination and flags
+ */
 export function makeMove(move) {
     const {r, c} = state.selected;
     const p = state.board[r][c];
