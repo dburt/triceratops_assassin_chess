@@ -82,7 +82,14 @@ export function render(handleClick, completePromotion) {
             }
             
             if (state.selected && state.selected.r === drawR && state.selected.c === drawC) div.classList.add('selected');
-            
+
+            // Highlight last move
+            if (state.lastMove &&
+                ((state.lastMove.from.r === drawR && state.lastMove.from.c === drawC) ||
+                 (state.lastMove.to.r === drawR && state.lastMove.to.c === drawC))) {
+                div.classList.add('last-move');
+            }
+
             const move = state.moves.find(m => m.r === drawR && m.c === drawC);
             if (move) {
                 const target = getEffectivePiece(drawR, drawC, state.board);
@@ -204,7 +211,7 @@ function fallbackCopyTextToClipboard(text) {
 }
 
 /**
- * Calculates and displays material count
+ * Calculates and displays material count and captured pieces
  */
 export function updateMaterialCount() {
     const materialValues = {
@@ -220,12 +227,21 @@ export function updateMaterialCount() {
     let whiteMaterial = 0;
     let blackMaterial = 0;
 
+    // Count material on board (only visible pieces)
     for (let r = 0; r < 8; r++) {
         for (let c = 0; c < 8; c++) {
             const piece = state.board[r][c];
-            if (piece && piece !== piece.toUpperCase()) {
+            if (!piece) continue;
+
+            // Skip hidden assassins
+            if (state.config.assassin && piece.toLowerCase() === 'a' &&
+                getEffectivePiece(r, c, state.board) === null) {
+                continue;
+            }
+
+            if (piece !== piece.toUpperCase()) {
                 blackMaterial += materialValues[piece] || 0;
-            } else if (piece) {
+            } else {
                 whiteMaterial += materialValues[piece] || 0;
             }
         }
@@ -234,11 +250,31 @@ export function updateMaterialCount() {
     const diff = whiteMaterial - blackMaterial;
     const materialEl = document.getElementById('materialCount');
 
-    if (diff === 0) {
-        materialEl.innerHTML = '<span>Material: Equal</span>';
-    } else if (diff > 0) {
-        materialEl.innerHTML = `<span>Material: <span class="material-advantage white">White +${diff}</span></span>`;
-    } else {
-        materialEl.innerHTML = `<span>Material: <span class="material-advantage black">Black +${Math.abs(diff)}</span></span>`;
+    // Build captured pieces display
+    const whiteCaptured = state.captured.white.map(p => SYMBOLS[p]).join(' ');
+    const blackCaptured = state.captured.black.map(p => SYMBOLS[p]).join(' ');
+
+    let html = '<div class="material-info">';
+
+    // Show captured by white (black pieces)
+    if (whiteCaptured) {
+        html += `<div class="captured-pieces">White captured: ${whiteCaptured}</div>`;
     }
+
+    // Show material advantage
+    if (diff === 0) {
+        html += '<div>Material: Equal</div>';
+    } else if (diff > 0) {
+        html += `<div>Material: <span class="material-advantage white">White +${diff}</span></div>`;
+    } else {
+        html += `<div>Material: <span class="material-advantage black">Black +${Math.abs(diff)}</span></div>`;
+    }
+
+    // Show captured by black (white pieces)
+    if (blackCaptured) {
+        html += `<div class="captured-pieces">Black captured: ${blackCaptured}</div>`;
+    }
+
+    html += '</div>';
+    materialEl.innerHTML = html;
 }

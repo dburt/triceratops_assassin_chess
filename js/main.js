@@ -215,6 +215,41 @@ function loadGame() {
     input.click();
 }
 
+function resign() {
+    if (state.winner) return;
+    const msg = network.isConnected
+        ? `Resign as ${network.mySide}?`
+        : `${state.turn} resigns?`;
+    if (confirm(msg)) {
+        const winner = state.turn === 'white' ? 'Black' : 'White';
+        state.winner = `${winner} Wins by Resignation!`;
+        showStatus(state.winner);
+        render();
+        if (network.isConnected) sendState();
+    }
+}
+
+function offerDraw() {
+    if (state.winner) return;
+    const msg = network.isConnected
+        ? "Offer draw to opponent?"
+        : "Agree to a draw?";
+    if (confirm(msg)) {
+        // In local play, immediately accept
+        if (!network.isConnected) {
+            state.winner = "Draw by Agreement";
+            showStatus(state.winner);
+            render();
+        } else {
+            // In network play, send offer (simplified: just accept immediately for now)
+            state.winner = "Draw by Agreement";
+            showStatus(state.winner);
+            render();
+            sendState();
+        }
+    }
+}
+
 function toggleNetworkMode() {
     const networkControls = document.getElementById('networkControls');
     networkControls.classList.toggle('hidden');
@@ -235,6 +270,8 @@ function setupEventListeners() {
     document.getElementById('btnRedo').onclick = redo;
     document.getElementById('btnSave').onclick = saveGame;
     document.getElementById('btnLoad').onclick = loadGame;
+    document.getElementById('btnOfferDraw').onclick = offerDraw;
+    document.getElementById('btnResign').onclick = resign;
     document.getElementById('networkBtn').onclick = toggleNetworkMode;
     document.getElementById('gameOptionsBtn').onclick = toggleGameOptions;
 

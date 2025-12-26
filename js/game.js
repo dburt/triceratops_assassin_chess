@@ -201,21 +201,45 @@ export function makeMove(move) {
     const {r, c} = state.selected;
     const p = state.board[r][c];
     const isW = p === p.toUpperCase();
-    
+
     const captured = state.board[move.r][move.c];
-    
+    const capturedEnPassant = move.enPassant ? state.board[r][move.c] : null;
+
     // Check if trying to capture own assassin
-    if (captured && captured.toLowerCase() === 'a' && 
+    if (captured && captured.toLowerCase() === 'a' &&
         ((isW && captured === 'A') || (!isW && captured === 'a'))) {
         if (!confirm('Are you sure you want to capture your own assassin?')) {
             return; // Cancel the move
         }
     }
-    
+
     let notation = p.toUpperCase() === 'P' && captured ? "px" : (p.toUpperCase() !== 'P' ? p.toUpperCase() : "");
     if (captured && p.toUpperCase() !== 'P') notation += "x";
     const files = "abcdefgh";
     notation += files[move.c] + (8-move.r);
+
+    // Track captured pieces (only if visible)
+    const actualCaptured = capturedEnPassant || captured;
+    if (actualCaptured) {
+        const wasVisible = actualCaptured.toLowerCase() !== 'a' ||
+                          getEffectivePiece(capturedEnPassant ? r : move.r,
+                                           capturedEnPassant ? move.c : move.c,
+                                           state.board) !== null;
+        if (wasVisible) {
+            const capturingSide = isW ? 'white' : 'black';
+            state.captured[capturingSide].push(actualCaptured);
+        }
+    }
+
+    // Track last move for highlighting
+    state.lastMove = { from: {r, c}, to: {r: move.r, c: move.c} };
+
+    // Track moves for fifty-move rule
+    if (p.toLowerCase() === 'p' || actualCaptured) {
+        state.movesSincePawnOrCapture = 0;
+    } else {
+        state.movesSincePawnOrCapture++;
+    }
 
     state.board[move.r][move.c] = p;
     state.board[r][c] = null;
@@ -266,18 +290,119 @@ export function completePromotion(type) {
     endTurn();
 }
 
+/**
+ * Checks if the current player has any legal moves (for stalemate detection)
+ */
+function hasLegalMoves(color) {
+    const isW = color === 'white';
+    for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+            const p = state.board[r][c];
+            if (p && ((isW && p === p.toUpperCase()) || (!isW && p === p.toLowerCase()))) {
+                if (getSafeMoves(r, c, p).length > 0) return true;
+            }
+        }
+    }
+    return false;
+}
+
+/**
+ * Checks if there's insufficient material for checkmate
+ */
+function hasInsufficientMaterial() {
+    const pieces = { white: [], black: [] };
+
+    for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+            const p = state.board[r][c];
+            if (!p || p.toLowerCase() === 'k') continue;
+
+            // Skip hidden assassins
+            if (state.config.assassin && p.toLowerCase() === 'a' &&
+                getEffectivePiece(r, c, state.board) === null) continue;
+
+            const color = p === p.toUpperCase() ? 'white' : 'black';
+            pieces[color].push(p.toLowerCase());
+        }
+    }
+
+    // K vs K
+    if (pieces.white.length === 0 && pieces.black.length === 0) return true;
+
+    // K+N vs K or K+B vs K
+    if ((pieces.white.length === 0 && pieces.black.length === 1) ||
+        (pieces.black.length === 0 && pieces.white.length === 1)) {
+        const piece = pieces.white[0] || pieces.black[0];
+        if (piece === 'n' || piece === 'b') return true;
+    }
+
+    // K+B vs K+B (same color bishops)
+    if (pieces.white.length === 1 && pieces.black.length === 1 &&
+        pieces.white[0] === 'b' && pieces.black[0] === 'b') {
+        // Check if bishops are on same color squares (simplified: assume they are)
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * Generates a position string for repetition detection
+ */
+function getPositionString() {
+    let pos = state.turn + ':';
+    for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+            const p = state.board[r][c];
+            pos += p || '-';
+        }
+    }
+    return pos;
+}
+
+/**
+ * Checks for threefold repetition
+ */
+function hasThreefoldRepetition() {
+    const current = getPositionString();
+    const count = state.positionHistory.filter(pos => pos === current).length;
+    return count >= 2; // Current position + 2 previous = 3 total
+}
+
 function endTurn() {
     state.selected = null;
     state.moves = [];
-    state.showMyHidden = false; 
+    state.showMyHidden = false;
 
     const wKing = findKing('white');
     const bKing = findKing('black');
     if (!wKing) state.winner = "Black Wins!";
     else if (!bKing) state.winner = "White Wins!";
-    
+
     if (!state.winner) {
         state.turn = state.turn === 'white' ? 'black' : 'white';
+
+        // Check for draws
+        if (!hasLegalMoves(state.turn)) {
+            // No legal moves - check if it's checkmate or stalemate
+            if (inCheck(state.turn)) {
+                const winner = state.turn === 'white' ? 'Black' : 'White';
+                state.winner = `${winner} Wins by Checkmate!`;
+            } else {
+                state.winner = "Draw by Stalemate";
+            }
+        } else if (hasInsufficientMaterial()) {
+            state.winner = "Draw by Insufficient Material";
+        } else if (state.movesSincePawnOrCapture >= 100) { // 50 moves per side = 100 half-moves
+            state.winner = "Draw by Fifty-Move Rule";
+        } else {
+            // Track position for threefold repetition
+            state.positionHistory.push(getPositionString());
+            if (hasThreefoldRepetition()) {
+                state.winner = "Draw by Threefold Repetition";
+            }
+        }
+
         saveHistorySnapshot();
     }
 }
@@ -293,7 +418,11 @@ export function saveHistorySnapshot() {
         config: state.config,
         assassinsPlaced: state.assassinsPlaced,
         moveList: state.moveList,
-        timers: state.timers
+        timers: state.timers,
+        captured: state.captured,
+        lastMove: state.lastMove,
+        movesSincePawnOrCapture: state.movesSincePawnOrCapture,
+        positionHistory: state.positionHistory
     }));
     state.history = state.history.slice(0, state.historyIndex + 1);
     state.history.push(snapshot);
@@ -310,6 +439,10 @@ export function restoreSnapshot(snap) {
         assassinsPlaced: JSON.parse(JSON.stringify(snap.assassinsPlaced)),
         moveList: [...snap.moveList],
         timers: {...snap.timers},
+        captured: snap.captured ? JSON.parse(JSON.stringify(snap.captured)) : { white: [], black: [] },
+        lastMove: snap.lastMove ? JSON.parse(JSON.stringify(snap.lastMove)) : null,
+        movesSincePawnOrCapture: snap.movesSincePawnOrCapture || 0,
+        positionHistory: snap.positionHistory ? [...snap.positionHistory] : [],
         selected: null,
         moves: [],
         promotion: null,

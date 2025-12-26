@@ -19,11 +19,15 @@ export let state = {
     showMyHidden: false,
     promotion: null,
     winner: null,
-    history: [],    
-    moveList: [],   
+    history: [],
+    moveList: [],
     historyIndex: -1,
     timers: { white: 600, black: 600 },
-    timerInterval: null
+    timerInterval: null,
+    captured: { white: [], black: [] }, // Pieces captured by each side (only revealed pieces)
+    lastMove: null, // {from: {r, c}, to: {r, c}} for highlighting
+    movesSincePawnOrCapture: 0, // For fifty-move rule
+    positionHistory: [] // For threefold repetition (FEN-like strings)
 };
 
 /**
