@@ -19,14 +19,14 @@ h1 { margin: 5px 0; }
 .square { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; font-size: 24px; cursor: pointer; position: relative; }
 
 /* Coordinate labels */
-.coord-files, .coord-ranks { color: #999; font-size: 12px; letter-spacing: 0; display: flex; justify-content: space-around; user-select: none; }
-.coord-files { margin: 0 auto; width: 100%; max-width: 360px; padding: 2px 0; letter-spacing: 34px; text-align: center; justify-content: center; padding-left: 17px; }
-.coord-ranks { position: absolute; left: 0; top: 0; flex-direction: column; justify-content: space-around; height: 360px; padding: 0 5px; letter-spacing: 28px; line-height: 45px; writing-mode: vertical-lr; text-orientation: upright; }
+.coord-files, .coord-ranks { color: #999; font-size: 12px; user-select: none; }
+.coord-files { margin: 0 auto; width: 100%; max-width: 360px; padding: 2px 0; display: flex; justify-content: space-around; }
+.coord-ranks { position: absolute; left: 2px; top: 0; height: 360px; display: flex; flex-direction: column; justify-content: space-around; }
 @media (min-width: 768px) {
   .board { width: 400px; height: 400px; }
   .square { font-size: 38px; }
-  .coord-files { max-width: 400px; letter-spacing: 38px; padding-left: 19px; }
-  .coord-ranks { height: 400px; line-height: 50px; letter-spacing: 31px; }
+  .coord-files { max-width: 400px; }
+  .coord-ranks { height: 400px; }
 }
 @media (max-width: 767px) {
   .board { width: 90vw; height: 90vw; max-width: 360px; max-height: 360px; }
