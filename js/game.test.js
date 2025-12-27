@@ -231,22 +231,24 @@ describe('Castling', () => {
     expect(moves).toContainEqual({ r: 7, c: 2, castle: 'q' });
   });
 
-  // Note: Castling validation works correctly in actual gameplay
-  // These tests have complex setup requirements, skipping for simplicity
-  test.skip('cannot castle through check', () => {
-    state.board[7][5] = null; // Remove bishop
-    state.board[7][6] = null; // Remove knight
-    state.board[5][5] = 'r'; // Black rook on f3 attacks f1
+  test('cannot castle through check', () => {
+    state.board[7][5] = null; // Remove bishop on f1
+    state.board[7][6] = null; // Remove knight on g1
+    state.board[6] = Array(8).fill(null); // Clear all white pawns
+    state.board[1] = Array(8).fill(null); // Clear all black pawns
+    state.board[3][5] = 'r'; // Black rook on f5 attacks f-file including f1
     state.selected = { r: 7, c: 4 };
     const moves = getSafeMoves(7, 4, 'K');
 
     expect(moves).not.toContainEqual({ r: 7, c: 6, castle: 'k' });
   });
 
-  test.skip('cannot castle when in check', () => {
-    state.board[7][5] = null; // Remove bishop
-    state.board[7][6] = null; // Remove knight
-    state.board[5][4] = 'r'; // Black rook on e3 attacks e1
+  test('cannot castle when in check', () => {
+    state.board[7][5] = null; // Remove bishop on f1
+    state.board[7][6] = null; // Remove knight on g1
+    state.board[6] = Array(8).fill(null); // Clear all white pawns
+    state.board[1] = Array(8).fill(null); // Clear all black pawns
+    state.board[3][4] = 'r'; // Black rook on e5 attacks e-file including e1
     state.selected = { r: 7, c: 4 };
     const moves = getSafeMoves(7, 4, 'K');
 
@@ -291,17 +293,20 @@ describe('Check and Checkmate Detection', () => {
 describe('Triceratops Moves', () => {
   beforeEach(() => resetState({ dino: true }));
 
-  // Note: Triceratops movement works in gameplay - test setup needs refinement
-  test.skip('triceratops moves like queen + knight', () => {
+  test('triceratops moves like queen + knight', () => {
+    // Clear board and place triceratops in center
+    state.board = Array(8).fill(null).map(() => Array(8).fill(null));
     state.board[4][4] = 'T'; // White triceratops on e4
-    state.board[5][4] = null; // Clear original position
-    state.board[6] = Array(8).fill(null); // Clear white pawns
-    state.board[1] = Array(8).fill(null); // Clear black pawns for diagonal moves
+    state.board[7][4] = 'K'; // White king
+    state.board[0][4] = 'k'; // Black king
     state.selected = { r: 4, c: 4 };
     const moves = getSafeMoves(4, 4, 'T');
 
-    // Should have queen-like moves (orthogonal)
-    expect(moves).toContainEqual({ r: 3, c: 4 }); // e5 (orthogonal)
+    // Should have queen-like moves (orthogonal and diagonal)
+    expect(moves).toContainEqual({ r: 3, c: 4 }); // e5 (orthogonal up)
+    expect(moves).toContainEqual({ r: 5, c: 4 }); // e3 (orthogonal down)
+    expect(moves).toContainEqual({ r: 4, c: 3 }); // d4 (orthogonal left)
+    expect(moves).toContainEqual({ r: 4, c: 5 }); // f4 (orthogonal right)
 
     // Should have knight moves
     expect(moves).toContainEqual({ r: 2, c: 3 }); // d6 (knight)
@@ -309,8 +314,8 @@ describe('Triceratops Moves', () => {
     expect(moves).toContainEqual({ r: 3, c: 2 }); // c5 (knight)
     expect(moves).toContainEqual({ r: 3, c: 6 }); // g5 (knight)
 
-    // Triceratops should have many moves (more than a knight or rook alone)
-    expect(moves.length).toBeGreaterThan(8);
+    // Triceratops should have many moves (queen + knight = lot of options)
+    expect(moves.length).toBeGreaterThan(15);
   });
 });
 
@@ -330,12 +335,11 @@ describe('Assassin - Hidden Mechanics', () => {
     expect(effective).toBe('A'); // Should be revealed
   });
 
-  // Note: Assassin reveal logic works in gameplay - test setup is complex
-  test.skip('assassin revealed when enemy pawn passes its rank', () => {
+  test('assassin revealed when enemy pawn passes its rank', () => {
     state.board[5][4] = 'A'; // White assassin on e3 (rank 5)
-    state.board[4][6] = 'p'; // Black pawn on g4 (rank 4, passed assassin's rank)
+    state.board[6][6] = 'p'; // Black pawn on g2 (rank 6, passed assassin's rank 5)
     const effective = getEffectivePiece(5, 4, state.board);
-    expect(effective).toBe('A'); // Should be revealed
+    expect(effective).toBe('A'); // Should be revealed (pawn row 6 > assassin row 5)
   });
 
   test('assassin stays hidden without revealing pawn', () => {
@@ -349,22 +353,27 @@ describe('Assassin - Hidden Mechanics', () => {
 describe('Assassin - Movement', () => {
   beforeEach(() => resetState({ assassin: true }));
 
-  // Note: Assassin movement works - test needs better reveal setup
-  test.skip('assassin can move 2 squares in any direction when revealed', () => {
-    state.board[5][4] = 'A'; // White assassin on e3
-    state.board[4][3] = 'p'; // Reveal it with black pawn on d4
-    state.board[7] = Array(8).fill(null); // Clear rank 1 for movement
-    state.board[7][4] = null; // Make sure e1 is clear
-    state.selected = { r: 5, c: 4 };
-    const moves = getSafeMoves(5, 4, 'A');
+  test('assassin can move 2 squares in any direction when revealed', () => {
+    // Clear board and set up simple scenario
+    state.board = Array(8).fill(null).map(() => Array(8).fill(null));
+    state.board[4][4] = 'A'; // White assassin on e4
+    state.board[7][4] = 'K'; // White king on e1
+    state.board[0][4] = 'k'; // Black king on e8
+    state.board[3][3] = 'p'; // Black pawn on d5 reveals assassin
+    state.selected = { r: 4, c: 4 };
+    const moves = getSafeMoves(4, 4, 'A');
 
-    // Verify assassin can move (may not get all expected squares due to king safety)
+    // Verify assassin has moves
     expect(moves.length).toBeGreaterThan(0);
 
-    // Should be able to move in some directions
-    expect(moves).toContainEqual({ r: 3, c: 4 }); // e5 (2 up)
-    expect(moves).toContainEqual({ r: 5, c: 2 }); // c3 (2 left)
-    expect(moves).toContainEqual({ r: 5, c: 6 }); // g3 (2 right)
+    // Should be able to move 2 squares in various directions
+    expect(moves).toContainEqual({ r: 2, c: 4 }); // e6 (2 up)
+    expect(moves).toContainEqual({ r: 6, c: 4 }); // e2 (2 down)
+    expect(moves).toContainEqual({ r: 4, c: 2 }); // c4 (2 left)
+    expect(moves).toContainEqual({ r: 4, c: 6 }); // g4 (2 right)
+
+    // Should be able to capture 1 square away
+    expect(moves).toContainEqual({ r: 3, c: 3 }); // d5 (capture pawn)
   });
 
   test('assassin can capture 1 square away', () => {

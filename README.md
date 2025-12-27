@@ -15,6 +15,11 @@ For a reference covering all rules, features, and technical details, please see 
 - Proper castling legality (can't castle through check)
 - En passant capture implementation
 - Comprehensive check and checkmate detection
+- Complete draw detection (stalemate, insufficient material, threefold repetition, fifty-move rule)
+- Resign and offer draw functionality
+- Coordinate labels (a-h, 1-8)
+- Material count display with captured pieces
+- Last move highlighting
 
 ### Special Pieces
 
@@ -151,38 +156,23 @@ npm run deploy
 
 ## Future Enhancements
 
-### Recently Added
-- Resignation and draw offer buttons
-- Draw detection (threefold repetition, fifty-move rule, insufficient material)
-- Captured pieces display
-- Last move highlighting
-- Coordinate labels (a-h, 1-8)
-- Material count display
-- Unit testing with Jest
-- ESLint configuration for code quality
-
-### Core Chess Rules
-- Insufficient material detection (K vs K, K+B vs K, etc.)
-- Threefold repetition detection and draw claims
-- Fifty-move rule (50 moves without pawn move/capture)
-
 ### User Experience
 - Drag-and-drop piece movement
 - Sound effects for moves/captures/check
-- Coordinate labels (a-h, 1-8)
 - Move hints and threat indicators
 - Opening book integration
-- Material count display
 - Keyboard navigation
 - High contrast mode
 - Tournament modes (Blitz, Bullet, Classical)
 
-### Additional Features
+### Advanced Features
 - AI opponent with adjustable difficulty
 - Analysis tools and move evaluation
 - Player profiles and statistics
 - Tournament system
 - Additional special pieces and variants
+- Game replay viewer
+- PGN export/import
 
 ## License
 
