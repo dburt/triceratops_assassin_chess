@@ -78,6 +78,54 @@ For a reference covering all rules, features, and technical details, please see 
    - Reveal assassins by attacking with pawns
    - Use "A??" moves to keep opponents guessing
 
+## Development
+
+### Running Locally
+```bash
+# Start local development server
+npm start
+# or
+./run
+# or
+python3 -m http.server
+```
+Open http://localhost:8000 in your browser.
+
+### Testing
+```bash
+# Run all tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage
+npm run test:coverage
+```
+
+### Linting
+```bash
+# Check code style
+npm run lint
+
+# Fix linting issues
+npm run lint:fix
+```
+
+### Quality Check
+```bash
+# Run linting and tests together
+npm run check
+```
+
+### Deployment
+```bash
+# Deploy to production server
+npm run deploy
+# or
+./deploy
+```
+
 ## Technical
 
 - **Architecture**: Multi-file deployment with separation of concerns
@@ -88,6 +136,8 @@ For a reference covering all rules, features, and technical details, please see 
   - `sw.js` - Service worker for offline support
   - `icon.svg` - Custom game icon
 - **Technologies**: Pure HTML/CSS/JavaScript (ES6+)
+- **Testing**: Jest with jsdom environment for unit tests
+- **Linting**: ESLint for code quality and consistency
 - **Responsive Design**: CSS Grid and Flexbox with mobile-first approach
 - **Networking**: WebRTC peer-to-peer via PeerJS
 - **PWA Features**: Service worker, app manifest, offline capability
@@ -101,8 +151,17 @@ For a reference covering all rules, features, and technical details, please see 
 
 ## Future Enhancements
 
-### Core Chess Rules
+### Recently Added
 - Resignation and draw offer buttons
+- Draw detection (threefold repetition, fifty-move rule, insufficient material)
+- Captured pieces display
+- Last move highlighting
+- Coordinate labels (a-h, 1-8)
+- Material count display
+- Unit testing with Jest
+- ESLint configuration for code quality
+
+### Core Chess Rules
 - Insufficient material detection (K vs K, K+B vs K, etc.)
 - Threefold repetition detection and draw claims
 - Fifty-move rule (50 moves without pawn move/capture)

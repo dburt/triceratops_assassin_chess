@@ -9,7 +9,10 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "lint": "eslint js/**/*.js",
-    "lint:fix": "eslint js/**/*.js --fix"
+    "lint:fix": "eslint js/**/*.js --fix",
+    "check": "npm run lint && npm test",
+    "start": "./run",
+    "deploy": "./deploy"
   },
   "jest": {
     "testEnvironment": "jsdom",
