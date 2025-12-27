@@ -397,6 +397,43 @@ describe('Assassin - Movement', () => {
   });
 });
 
+describe('Assassin - Notation', () => {
+  beforeEach(() => resetState({ assassin: true }));
+
+  test('hidden assassin capture shows proper notation, not A??', () => {
+    // Clear board
+    state.board = Array(8).fill(null).map(() => Array(8).fill(null));
+    state.board[7][4] = 'K'; // White king on e1
+    state.board[0][4] = 'k'; // Black king on e8
+    state.board[5][4] = 'A'; // White assassin on e3 (hidden)
+    state.board[4][4] = 'p'; // Black pawn on e4 (target)
+
+    state.turn = 'white';
+    state.selected = { r: 5, c: 4 };
+
+    // Assassin captures pawn - should show "Axe4" not "A??"
+    makeMove({ r: 4, c: 4 });
+
+    expect(state.moveList[state.moveList.length - 1]).toBe('Axe4');
+  });
+
+  test('hidden assassin non-capture shows A??', () => {
+    // Clear board
+    state.board = Array(8).fill(null).map(() => Array(8).fill(null));
+    state.board[7][4] = 'K'; // White king on e1
+    state.board[0][4] = 'k'; // Black king on e8
+    state.board[5][4] = 'A'; // White assassin on e3 (hidden)
+
+    state.turn = 'white';
+    state.selected = { r: 5, c: 4 };
+
+    // Assassin moves without capture - should show "A??"
+    makeMove({ r: 3, c: 4 });
+
+    expect(state.moveList[state.moveList.length - 1]).toBe('A??');
+  });
+});
+
 describe('Draw Detection', () => {
   beforeEach(() => resetState());
 

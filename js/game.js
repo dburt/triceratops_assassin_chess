@@ -267,7 +267,7 @@ export function makeMove(move) {
         return; // Pause turn until promotion is chosen
     }
 
-    if (p.toLowerCase() === 'a' && getEffectivePiece(r, c, state.board) === null) {
+    if (p.toLowerCase() === 'a' && getEffectivePiece(r, c, state.board) === null && !captured) {
         state.moveList.push("A??");
     } else {
         state.moveList.push(notation);
