@@ -231,8 +231,10 @@ export function makeMove(move) {
         }
     }
 
-    // Track last move for highlighting
-    state.lastMove = { from: {r, c}, to: {r: move.r, c: move.c} };
+    // Track last move for highlighting (hidden if assassin is hidden at destination)
+    const isHidden = state.config.assassin && p.toLowerCase() === 'a' &&
+        getEffectivePiece(move.r, move.c, state.board) === null;
+    state.lastMove = { from: {r, c}, to: {r: move.r, c: move.c}, hidden: isHidden, side: isW ? 'white' : 'black' };
 
     // Track moves for fifty-move rule
     if (p.toLowerCase() === 'p' || actualCaptured) {

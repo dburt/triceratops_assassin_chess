@@ -83,11 +83,18 @@ export function render(handleClick, completePromotion) {
             
             if (state.selected && state.selected.r === drawR && state.selected.c === drawC) div.classList.add('selected');
 
-            // Highlight last move
+            // Highlight last move (but not for hidden assassin moves, unless owner has visibility on)
             if (state.lastMove &&
                 ((state.lastMove.from.r === drawR && state.lastMove.from.c === drawC) ||
                  (state.lastMove.to.r === drawR && state.lastMove.to.c === drawC))) {
-                div.classList.add('last-move');
+                let showHighlight = true;
+                if (state.lastMove.hidden) {
+                    const amIOwner = network.isConnected
+                        ? (state.lastMove.side === network.mySide)
+                        : (isW ? state.lastMove.side === 'white' : state.lastMove.side === 'black');
+                    showHighlight = amIOwner && state.showMyHidden;
+                }
+                if (showHighlight) div.classList.add('last-move');
             }
 
             const move = state.moves.find(m => m.r === drawR && m.c === drawC);

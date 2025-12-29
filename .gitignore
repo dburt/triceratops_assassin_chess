@@ -19,3 +19,8 @@ yarn-error.log*
 # OS files
 .DS_Store
 Thumbs.db
+
+# Draft images and prompts
+images/
+image-gen-prompts.md
+*.bak
